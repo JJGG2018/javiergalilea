@@ -318,22 +318,24 @@
   }
 
   // --- INITIALIZE WASM ---
+  const WASM_PATH = 'wasm/engine.wasm';
+
   async function initWasm() {
     try {
       let wasmModule;
       if (typeof WebAssembly.instantiateStreaming === 'function') {
         try {
-          const res = await WebAssembly.instantiateStreaming(fetch('engine.wasm'));
+          const res = await WebAssembly.instantiateStreaming(fetch(WASM_PATH));
           wasmModule = res.instance;
         } catch (streamingErr) {
           // Fallback if MIME type not application/wasm on local server
-          const response = await fetch('engine.wasm');
+          const response = await fetch(WASM_PATH);
           const bytes = await response.arrayBuffer();
           const res = await WebAssembly.instantiate(bytes);
           wasmModule = res.instance;
         }
       } else {
-        const response = await fetch('engine.wasm');
+        const response = await fetch(WASM_PATH);
         const bytes = await response.arrayBuffer();
         const res = await WebAssembly.instantiate(bytes);
         wasmModule = res.instance;
@@ -355,7 +357,7 @@
       if (window.location.protocol === 'file:') {
         const alertBox = document.createElement('div');
         alertBox.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#ef4444;color:white;padding:12px 24px;border-radius:10px;z-index:9999;font-size:14px;box-shadow:0 10px 25px rgba(0,0,0,0.5);text-align:center;';
-        alertBox.innerHTML = '⚠️ Los navegadores bloquean la carga de WebAssembly con protocolo <code>file://</code>.<br>Ejecuta <code>python -m http.server</code> en este directorio.';
+        alertBox.innerHTML = '⚠️ Los navegadores bloquean la carga de WebAssembly bajo protocolo <code>file://</code>.<br>Usa un servidor local como <code>npx serve</code>.';
         document.body.appendChild(alertBox);
       }
     }

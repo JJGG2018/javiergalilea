@@ -4,13 +4,11 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Rust build target
-wasm-engine/target/
+# Rust build artifacts
 target/
-
-# Python cache
-__pycache__/
-*.pyc
+engine/target/
+**/*.rs.bk
+Cargo.lock
 
 # Logs
 *.log

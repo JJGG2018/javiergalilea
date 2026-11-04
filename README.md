@@ -1,6 +1,6 @@
 # javiergalilea.es — Rust & WebAssembly Personal Home
 
-Sitio web personal y carta de presentación para **[javiergalilea.es](https://javiergalilea.es)**, construido con arquitectura ultraligera sin frameworks pesados, impulsado por **Rust** compilado a **WebAssembly (WASM)** nativo y HTML5 Canvas.
+Sitio web personal y carta de presentación para **[javiergalilea.es](https://javiergalilea.es)**, construido con arquitectura ultraligera sin frameworks pesados, impulsado por **Rust** (`#![no_std]`) compilado a **WebAssembly (WASM)** nativo y HTML5 Canvas.
 
 ---
 
@@ -15,8 +15,8 @@ Sitio web personal y carta de presentación para **[javiergalilea.es](https://ja
 - **Diseño Moderno & Responsivo:**
   - Estética oscura con tarjetas de cristal esmerilado (*glassmorphism*), degradados de neón y tipografía limpia.
   - Soporte completo para pantallas táctiles y Retina/HiDPI.
-- **Sin Dependencias Externas:**
-  - Código HTML5, CSS y JS puro que carga en milisegundos.
+- **Sin Dependencias de Runtimes Externos:**
+  - Solo Rust + Cargo para el motor y HTML5/CSS/JS nativo para la web.
 
 ---
 
@@ -24,56 +24,38 @@ Sitio web personal y carta de presentación para **[javiergalilea.es](https://ja
 
 ```text
 javiergalilea/
-├── wasm-engine/     # Crate de Rust (código fuente del motor)
-│   ├── Cargo.toml   # Configuración de Cargo (crate-type cdylib, LTO, opt-level z)
+├── .cargo/
+│   └── config.toml   # Configuración de compilación (target wasm32-unknown-unknown por defecto)
+├── Cargo.toml        # Workspace de Cargo raíz con perfiles de optimización
+├── engine/           # Crate de Rust (código fuente del motor WASM)
+│   ├── Cargo.toml    # Definición de la biblioteca cdylib
 │   └── src/
-│       └── lib.rs   # Código Rust (física de partículas, LCG RNG, benchmark)
-├── index.html       # Estructura de la web, secciones y controles HUD
-├── style.css        # Diseño, variables CSS y efectos visuales
-├── app.js           # Integración con WebAssembly, renderizado en canvas y benchmark
-├── engine.wasm      # Binario WebAssembly compilado desde Rust (1.1 KB)
-├── build_wasm.py    # Script de build para compilar Rust con Cargo y copiar el .wasm
-├── serve.py         # Servidor local con cabeceras MIME y seguridad para WASM
-└── README.md        # Documentación del proyecto
+│       └── lib.rs    # Código Rust (física de partículas, LCG RNG, benchmark)
+├── css/
+│   └── style.css     # Estilos, variables CSS y diseño responsive
+├── js/
+│   └── app.js        # Integración de WASM, renderizado en canvas y benchmark
+├── wasm/
+│   └── engine.wasm   # Binario WebAssembly compilado desde Rust (1.1 KB)
+├── index.html        # Página web principal
+├── .gitignore        # Exclusiones de Git (target de Rust, temporales, etc.)
+└── README.md         # Documentación del proyecto
 ```
 
 ---
 
-## 🚀 Cómo probarlo en local
+## 🦀 Compilación directa con Cargo
 
-Dado que los navegadores bloquean la carga de binarios WebAssembly bajo el protocolo `file://`, es necesario servirlo mediante HTTP:
+Gracias a la configuración de Cargo del repositorio, puedes compilar el motor WebAssembly desde la raíz con un solo comando:
 
-### Opción 1: Con Python (Recomendada)
 ```bash
-python serve.py
-```
-*Abrirá automáticamente tu navegador en `http://localhost:8080`.*
-
-O de forma directa:
-```bash
-python -m http.server 8080
+cargo build --release
 ```
 
-### Opción 2: Con Node.js
-```bash
-npx serve .
-```
+Y para copiar el binario generado a la carpeta web `wasm/`:
 
----
-
-## 🦀 Cómo compilar o modificar el código Rust
-
-El código fuente del motor se encuentra en [`wasm-engine/src/lib.rs`](wasm-engine/src/lib.rs).
-
-### Recompilar con Cargo directamente:
-```bash
-cargo build --manifest-path wasm-engine/Cargo.toml --target wasm32-unknown-unknown --release
-copy wasm-engine\target\wasm32-unknown-unknown\release\engine.wasm .\engine.wasm
-```
-
-### O mediante el script automatizado:
-```bash
-python build_wasm.py
+```powershell
+Copy-Item target/wasm32-unknown-unknown/release/engine.wasm wasm/engine.wasm
 ```
 
 ### Funciones exportadas en Rust:
@@ -84,21 +66,34 @@ python build_wasm.py
 
 ---
 
+## 🚀 Cómo probar la web en local
+
+Para servir los archivos estáticos en tu máquina (evitando las restricciones del protocolo `file://` para WebAssembly):
+
+### Con Node / npx:
+```bash
+npx serve .
+```
+
+O cualquier otro servidor HTTP estático de tu preferencia.
+
+---
+
 ## 🌐 Publicación con tu dominio `javiergalilea.es`
 
-Una vez tengas comprado el dominio `javiergalilea.es`, puedes alojar esta web de forma 100% gratuita con soporte HTTPS en cualquiera de estas plataformas:
+Una vez tengas registrado el dominio `javiergalilea.es`, puedes alojarlo gratis con HTTPS en:
 
-### 1. Cloudflare Pages (Muy recomendado para dominios .es)
+### 1. Cloudflare Pages
 1. Sube este repositorio a GitHub.
 2. En Cloudflare Dashboard -> **Workers & Pages** -> **Create application** -> **Pages**.
-3. Selecciona tu repositorio y haz clic en **Deploy** (no requiere comando de build, o puedes poner `cargo build --manifest-path wasm-engine/Cargo.toml --target wasm32-unknown-unknown --release && cp wasm-engine/target/wasm32-unknown-unknown/release/engine.wasm .` si configuras Rust).
+3. Selecciona tu repositorio y haz clic en **Deploy** (carpeta raíz `/`).
 4. Añade tu dominio personalizado `javiergalilea.es`.
 
 ### 2. GitHub Pages
-1. Sube los archivos a un repositorio (por ejemplo `javiergalilea.github.io` o `javiergalilea-es`).
+1. Sube los archivos a tu repositorio de GitHub.
 2. En Settings -> **Pages** -> Source: `main` / root.
 3. En **Custom domain**, introduce `javiergalilea.es`.
-4. Añade los registros CNAME o registros DNS tipo A (`185.199.108.153`, etc.) en tu registrador del dominio .es.
+4. Añade los registros DNS correspondientes en tu registrador del dominio .es.
 
 ### 3. Vercel o Netlify
-- Simplemente arrastra esta carpeta o conecta el repositorio Git y vincula `javiergalilea.es` en la configuración de DNS.
+- Conecta el repositorio Git o arrastra la carpeta para despliegue inmediato.
