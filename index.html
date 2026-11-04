@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Javier Galilea — javiergalilea.xyz</title>
-  <meta name="description" content="Página personal de Javier Galilea impulsada por WebAssembly (WASM). Alto rendimiento y visualización interactiva.">
+  <title>Javier Galilea — javiergalilea.es</title>
+  <meta name="description" content="Página personal de Javier Galilea impulsada por Rust y WebAssembly (WASM). Alto rendimiento y simulación interactiva.">
   <meta name="theme-color" content="#080b11">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,13 +21,12 @@
       <div class="brand">
         <span class="brand-monogram">JG</span>
         <div class="brand-text">
-          <span class="brand-name">javiergalilea.xyz</span>
+          <span class="brand-name">javiergalilea.es</span>
           <span class="brand-status"><span class="status-dot"></span> Dominio en proceso de alta</span>
         </div>
       </div>
       <nav class="nav-links">
         <a href="#hero">Inicio</a>
-        <a href="#wasm-demo">Motor WASM</a>
         <a href="#benchmark">Benchmark</a>
         <a href="#about">Sobre mí</a>
         <a href="#contact">Contacto</a>
@@ -39,16 +38,16 @@
     <!-- HERO SECTION -->
     <section id="hero" class="hero-section">
       <div class="hero-badge">
-        <span class="badge-icon">⚡</span>
-        <span>Motor WebAssembly Activo (822 B)</span>
+        <span class="badge-icon">🦀</span>
+        <span>Motor Rust + WebAssembly Activo (1.1 KB)</span>
       </div>
       <h1 class="hero-title">
         Hola, soy <span class="gradient-text">Javier Galilea</span>
       </h1>
       <p class="hero-subtitle">
-        Bienvenido a mi nuevo espacio web en <strong>javiergalilea.xyz</strong>.
+        Bienvenido a mi nuevo espacio web en <strong>javiergalilea.es</strong>.
         Esta página está construida con una arquitectura hiperligera que ejecuta un motor de física de partículas
-        y cálculo matemático compilado en <strong>WebAssembly nativo</strong> directo en tu navegador.
+        y cálculo matemático programado en <strong>Rust</strong> y compilado a <strong>WebAssembly nativo</strong> directo en tu navegador.
       </p>
 
       <!-- WASM Canvas Controls HUD -->
@@ -56,7 +55,7 @@
         <div class="hud-header">
           <div class="hud-title">
             <span class="hud-icon">🎮</span>
-            <span>Simulador de Partículas WASM (Mueve el ratón / Toca la pantalla)</span>
+            <span>Simulador de Partículas (Rust + WASM) — Mueve el ratón / Toca la pantalla</span>
           </div>
           <div class="hud-stats">
             <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
@@ -95,10 +94,10 @@
     <section id="benchmark" class="section">
       <div class="section-header">
         <span class="section-tag">Rendimiento en Vivo</span>
-        <h2>WebAssembly vs JavaScript</h2>
+        <h2>Rust (WASM) vs JavaScript</h2>
         <p class="section-desc">
           Comprobación en tiempo real en tu procesador. Calculamos 5 millones de términos de aproximación matemática
-          en un hilo sincrónico para comparar WASM frente al motor JS V8/SpiderMonkey.
+          en un hilo sincrónico para comparar el código compilado de Rust frente al motor JS V8/SpiderMonkey.
         </p>
       </div>
 
@@ -112,7 +111,7 @@
           <div class="bench-results">
             <div class="result-row">
               <div class="result-meta">
-                <span class="result-label"><span class="engine-tag wasm-tag">WASM</span> WebAssembly Nativo</span>
+                <span class="result-label"><span class="engine-tag wasm-tag">Rust WASM</span> WebAssembly Nativo</span>
                 <span class="result-time" id="wasmBenchTime">-- ms</span>
               </div>
               <div class="progress-bar-bg">
@@ -141,27 +140,27 @@
         </div>
 
         <div class="features-card glass-card">
-          <h3>¿Por qué WebAssembly para la web?</h3>
+          <h3>¿Por qué Rust + WebAssembly?</h3>
           <ul class="feature-list">
             <li>
-              <div class="feature-icon">🚀</div>
+              <div class="feature-icon">🦀</div>
               <div>
-                <strong>Cero sobrecoste de parsing:</strong>
-                <p>El código se distribuye en formato binario precompilado que el navegador ejecuta a velocidad casi nativa.</p>
+                <strong>Código Rust 100% Nativo:</strong>
+                <p>Escrito en Rust con <code>#![no_std]</code>, optimizado con LTO y compilado al target <code>wasm32-unknown-unknown</code>.</p>
               </div>
             </li>
             <li>
               <div class="feature-icon">🧠</div>
               <div>
-                <strong>Memoria Lineal Directa:</strong>
-                <p>La simulación manipula un buffer de memoria continuo sin pausas de Garbage Collector (GC).</p>
+                <strong>Memoria Lineal Compartida:</strong>
+                <p>Rust gestiona el buffer de datos de partículas directamente en memoria continua sin coste de recolección de basura.</p>
               </div>
             </li>
             <li>
               <div class="feature-icon">📦</div>
               <div>
-                <strong>Tamaño Mínimo:</strong>
-                <p>El módulo WASM de este sitio ocupa únicamente <strong>822 bytes</strong>, cargando al instante incluso en 3G.</p>
+                <strong>Binario de solo 1.1 KB:</strong>
+                <p>Carga en milisegundos con cero dependencias externas o paquetes pesados de npm.</p>
               </div>
             </li>
           </ul>
@@ -186,12 +185,12 @@
           <p class="role-text">Desarrollador de Software & Creador</p>
           <p class="bio-text">
             Apasionado por la construcción de herramientas rápidas, elegantes y robustas. Me entusiasma la intersección
-            entre el rendimiento de bajo nivel (WebAssembly, Rust, C++) y las experiencias interactivas modernas en la web.
+            entre el rendimiento de bajo nivel (Rust, WebAssembly, C++) y las experiencias interactivas modernas en la web.
           </p>
 
           <div class="skills-wrap">
-            <span class="skill-chip">WebAssembly</span>
             <span class="skill-chip">Rust</span>
+            <span class="skill-chip">WebAssembly</span>
             <span class="skill-chip">TypeScript</span>
             <span class="skill-chip">JavaScript</span>
             <span class="skill-chip">Python</span>
@@ -205,7 +204,7 @@
           <div class="domain-header">
             <span class="domain-icon">🌐</span>
             <div>
-              <h3>javiergalilea.xyz</h3>
+              <h3>javiergalilea.es</h3>
               <p class="domain-sub">Nuevo dominio oficial</p>
             </div>
           </div>
@@ -214,14 +213,14 @@
             <div class="step-item completed">
               <div class="step-circle">✓</div>
               <div class="step-info">
-                <strong>Diseño & Motor WASM</strong>
-                <span>Plantilla base interactiva y compilación binaria lista</span>
+                <strong>Motor Rust + WASM</strong>
+                <span>Código fuente en Rust compilado a WebAssembly (1.1 KB)</span>
               </div>
             </div>
             <div class="step-item current">
               <div class="step-circle">●</div>
               <div class="step-info">
-                <strong>Registro del Dominio</strong>
+                <strong>Registro del Dominio .es</strong>
                 <span>En proceso de adquisición en registrador DNS</span>
               </div>
             </div>
@@ -235,7 +234,7 @@
           </div>
 
           <div class="domain-tip">
-            💡 <em>Este proyecto ya está listo para ser desplegado con un solo comando en cuanto el registro del dominio esté completado.</em>
+            💡 <em>Este proyecto ya está listo para ser desplegado con un solo comando en cuanto el registro del dominio javiergalilea.es esté completado.</em>
           </div>
         </div>
       </div>
@@ -264,12 +263,12 @@
             <span>LinkedIn</span>
           </a>
 
-          <a href="mailto:contacto@javiergalilea.xyz" class="contact-btn">
+          <a href="mailto:contacto@javiergalilea.es" class="contact-btn">
             <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
               <polyline points="22,6 12,13 2,6"></polyline>
             </svg>
-            <span>contacto@javiergalilea.xyz</span>
+            <span>contacto@javiergalilea.es</span>
           </a>
         </div>
       </div>
@@ -278,9 +277,9 @@
 
   <footer class="footer">
     <div class="footer-content">
-      <p>© 2026 Javier Galilea · <strong>javiergalilea.xyz</strong></p>
+      <p>© 2026 Javier Galilea · <strong>javiergalilea.es</strong></p>
       <p class="wasm-credit">
-        ⚡ Impulsado por WebAssembly (WASM) nativo y Canvas 2D sin frameworks pesados.
+        🦀 Motor programado en Rust y compilado a WebAssembly nativo (1.1 KB).
       </p>
     </div>
   </footer>

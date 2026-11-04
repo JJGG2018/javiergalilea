@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Servidor HTTP local rápido para probar javiergalilea.xyz con WebAssembly.
+Servidor HTTP local rápido para probar javiergalilea.es con Rust y WebAssembly.
 """
 
 import http.server
@@ -41,3 +41,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\nServidor detenido.")
         sys.exit(0)
+
