@@ -37,6 +37,7 @@ javiergalilea/
 │   └── app.js        # Integración de WASM, renderizado en canvas y benchmark
 ├── wasm/
 │   └── engine.wasm   # Binario WebAssembly compilado desde Rust (1.1 KB)
+├── CNAME             # Dominio personalizado para GitHub Pages (javiergalilea.es)
 ├── index.html        # Página web principal
 ├── .gitignore        # Exclusiones de Git (target de Rust, temporales, etc.)
 └── README.md         # Documentación del proyecto
@@ -79,21 +80,6 @@ O cualquier otro servidor HTTP estático de tu preferencia.
 
 ---
 
-## 🌐 Publicación con tu dominio `javiergalilea.es`
+## 🌐 Despliegue en Producción (`javiergalilea.es`)
 
-Una vez tengas registrado el dominio `javiergalilea.es`, puedes alojarlo gratis con HTTPS en:
-
-### 1. Cloudflare Pages
-1. Sube este repositorio a GitHub.
-2. En Cloudflare Dashboard -> **Workers & Pages** -> **Create application** -> **Pages**.
-3. Selecciona tu repositorio y haz clic en **Deploy** (carpeta raíz `/`).
-4. Añade tu dominio personalizado `javiergalilea.es`.
-
-### 2. GitHub Pages
-1. Sube los archivos a tu repositorio de GitHub.
-2. En Settings -> **Pages** -> Source: `main` / root.
-3. En **Custom domain**, introduce `javiergalilea.es`.
-4. Añade los registros DNS correspondientes en tu registrador del dominio .es.
-
-### 3. Vercel o Netlify
-- Conecta el repositorio Git o arrastra la carpeta para despliegue inmediato.
+El sitio se encuentra desplegado automáticamente mediante **GitHub Pages** con certificado SSL/HTTPS sobre el dominio **[javiergalilea.es](https://javiergalilea.es)** (configurado a través del archivo [`CNAME`](CNAME) en la raíz del repositorio y los registros DNS `A` y `CNAME` del dominio `.es`).
