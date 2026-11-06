@@ -154,6 +154,18 @@
       });
     }
 
+    // Pantalla completa
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    if (fullscreenBtn) {
+      fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+    }
+
     // Benchmark Modal
     const benchModal = document.getElementById('benchModal');
     const openBenchBtn = document.getElementById('toggleBenchModal');
@@ -362,3 +374,4 @@
   initWasm();
   requestAnimationFrame(render);
 })();
+

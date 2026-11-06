@@ -39,6 +39,14 @@ javiergalilea/
 │   ├── index.html       # Aplicación a pantalla completa (/particulas/)
 │   ├── particulas.css   # Interfaz de laboratorio con HUD flotante
 │   └── particulas.js    # Controlador del simulador y modal de benchmark
+├── automata/            # Subproyecto #02: Autómata Celular & Vida Artificial
+│   ├── index.html       # Aplicación a pantalla completa (/automata/)
+│   ├── automata.css     # Estilos y controles
+│   └── automata.js      # Motor Conway, HighLife, Seeds y pincel interactivo
+├── ondas/               # Subproyecto #03: Laboratorio de Ondas & Audio
+│   ├── index.html       # Aplicación a pantalla completa (/ondas/)
+│   ├── ondas.css        # Estilos y controles
+│   └── ondas.js         # Síntesis acústica Web Audio API y figuras Lissajous
 ├── wasm/
 │   └── engine.wasm      # Binario WebAssembly compilado desde Rust (1.1 KB)
 ├── CNAME             # Dominio personalizado para GitHub Pages (javiergalilea.es)

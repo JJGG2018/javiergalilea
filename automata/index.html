@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autómata Celular & Vida Artificial — Javier Galilea</title>
+  <meta name="description" content="Simulador interactivo de autómatas celulares y vida artificial (Juego de la Vida, Brian's Brain, HighLife) en tiempo real por Javier Galilea.">
+  <link rel="canonical" href="https://javiergalilea.es/automata/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>">
+  <link rel="stylesheet" href="automata.css">
+</head>
+<body>
+  <!-- Lienzo de la Cuadrícula Celular -->
+  <canvas id="lifeCanvas"></canvas>
+
+  <!-- Barra Superior Flotante -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la página principal">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #02 · VIDA ARTIFICIAL</span>
+        <h1>Autómata Celular</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill">Gen <strong id="genCounter">0</strong></span>
+        <span class="stat-pill"><strong id="aliveCounter">0</strong> Células</span>
+        <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
+      </div>
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+      <button id="toggleHudBtn" class="icon-btn" title="Mostrar/Ocultar controles">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Indicador flotante inicial -->
+  <div class="canvas-hint" id="canvasHint">
+    ✏️ Haz clic y arrastra sobre la cuadrícula para sembrar células vivas
+  </div>
+
+  <!-- Dock Inferior Flotante de Controles -->
+  <aside class="hud-dock" id="hudDock">
+    <div class="hud-controls">
+      <!-- Reproducción / Pausa -->
+      <div class="control-group">
+        <label>Simulación</label>
+        <div class="button-toggle-group">
+          <button id="playBtn" class="toggle-btn active" title="Iniciar/Pausar simulación">
+            <span id="playIcon">⏸</span> <span id="playLabel">Pausar</span>
+          </button>
+          <button id="stepBtn" class="toggle-btn" title="Avanzar 1 generación">Paso</button>
+          <button id="clearBtn" class="toggle-btn" title="Limpiar todo el tablero">Limpiar</button>
+          <button id="randomBtn" class="toggle-btn" title="Generar células aleatorias">Aleatorio</button>
+        </div>
+      </div>
+
+      <!-- Regla de Simulación -->
+      <div class="control-group">
+        <label>Regla del Autómata</label>
+        <div class="button-toggle-group">
+          <button class="rule-btn active" data-rule="conway" title="B3/S23 Conway clásico">Conway</button>
+          <button class="rule-btn" data-rule="highlife" title="B36/S23 Con replicador">HighLife</button>
+          <button class="rule-btn" data-rule="seeds" title="B2/S0 Caos y expansión">Seeds</button>
+          <button class="rule-btn" data-rule="daynight" title="B3678/S34678 Inversiones">Day & Night</button>
+        </div>
+      </div>
+
+      <!-- Inyector de Patrones -->
+      <div class="control-group">
+        <label>Inyectar Patrón</label>
+        <div class="button-toggle-group">
+          <button class="pattern-btn" data-pattern="glider">Planeador</button>
+          <button class="pattern-btn" data-pattern="pulsar">Púlsar</button>
+          <button class="pattern-btn" data-pattern="gosper">Cañón Gosper</button>
+          <button class="pattern-btn" data-pattern="acorn">Bellota</button>
+        </div>
+      </div>
+
+      <!-- Paleta Visual -->
+      <div class="control-group">
+        <label>Tema Visual</label>
+        <div class="button-toggle-group">
+          <button class="palette-btn active" data-palette="bio">Bio</button>
+          <button class="palette-btn" data-palette="cyber">Cyber</button>
+          <button class="palette-btn" data-palette="matrix">Matrix</button>
+          <button class="palette-btn" data-palette="fire">Fuego</button>
+        </div>
+      </div>
+
+      <!-- Tamaño y Velocidad -->
+      <div class="control-group speed-group">
+        <label for="speedSlider">
+          <span>Velocidad</span>
+          <strong id="speedLabel">30 gen/s</strong>
+        </label>
+        <input type="range" id="speedSlider" min="1" max="60" step="1" value="30">
+      </div>
+    </div>
+  </aside>
+
+  <script src="automata.js"></script>
+</body>
+</html>
