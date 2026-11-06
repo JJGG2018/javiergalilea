@@ -3,254 +3,273 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Javier Galilea — javiergalilea.es</title>
-  <meta name="description" content="Página personal de Javier Galilea impulsada por Rust y WebAssembly (WASM). Alto rendimiento y simulación interactiva.">
+  <title>Javier Galilea — Laboratorio Digital & Proyectos</title>
+  <meta name="description" content="Espacio personal y laboratorio de subproyectos interactivos de Javier Galilea. Desarrollo de software, Rust, WebAssembly y experiencias visuales.">
   <link rel="canonical" href="https://javiergalilea.es/">
   <meta property="og:title" content="Javier Galilea — javiergalilea.es">
-  <meta property="og:description" content="Página personal de Javier Galilea impulsada por Rust y WebAssembly (WASM). Alto rendimiento y simulación interactiva.">
+  <meta property="og:description" content="Espacio personal y laboratorio de subproyectos interactivos de Javier Galilea.">
   <meta property="og:url" content="https://javiergalilea.es/">
   <meta property="og:type" content="website">
-  <meta name="theme-color" content="#080b11">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>">
+  <meta name="theme-color" content="#06080f">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Fondo Canvas Interactivo WASM -->
-  <div class="canvas-container">
-    <canvas id="wasmCanvas"></canvas>
-    <div class="canvas-overlay"></div>
+  <!-- Fondo Ambiental Visual -->
+  <div class="ambient-bg">
+    <canvas id="ambientCanvas"></canvas>
+    <div class="aurora-glow aurora-1"></div>
+    <div class="aurora-glow aurora-2"></div>
+    <div class="ambient-vignette"></div>
   </div>
 
+  <!-- Navegación Principal -->
   <header class="navbar">
     <div class="nav-content">
-      <div class="brand">
+      <a href="#inicio" class="brand">
         <span class="brand-monogram">JG</span>
         <div class="brand-text">
-          <span class="brand-name">javiergalilea.es</span>
-          <span class="brand-status"><span class="status-dot"></span> Dominio .es activo</span>
+          <span class="brand-name">Javier Galilea</span>
+          <span class="brand-status"><span class="status-dot"></span> javiergalilea.es</span>
         </div>
-      </div>
+      </a>
       <nav class="nav-links">
-        <a href="#hero">Inicio</a>
-        <a href="#benchmark">Benchmark</a>
-        <a href="#about">Sobre mí</a>
-        <a href="#contact">Contacto</a>
+        <a href="#proyectos">Subproyectos</a>
+        <a href="#sobre-mi">Sobre mí</a>
+        <a href="#contacto">Contacto</a>
+        <a href="particulas/" class="nav-cta">🦀 Partículas WASM</a>
       </nav>
     </div>
   </header>
 
   <main>
-    <!-- HERO SECTION -->
-    <section id="hero" class="hero-section">
-      <div class="hero-badge">
-        <span class="badge-icon">🦀</span>
-        <span>Motor Rust + WebAssembly Activo (1.1 KB)</span>
+    <!-- HERO VISUAL -->
+    <section id="inicio" class="hero-section">
+      <div class="hero-pill">
+        <span class="pulse-ring"></span>
+        <span>Laboratorio Personal · Código & Experiencias Interactivas</span>
       </div>
+
       <h1 class="hero-title">
-        Hola, soy <span class="gradient-text">Javier Galilea</span>
+        Diseño visual, código nativo y <span class="gradient-text">experimentos en vivo</span>.
       </h1>
+
       <p class="hero-subtitle">
-        Bienvenido a mi nuevo espacio web en <strong>javiergalilea.es</strong>.
-        Esta página está construida con una arquitectura hiperligera que ejecuta un motor de física de partículas
-        y cálculo matemático programado en <strong>Rust</strong> y compilado a <strong>WebAssembly nativo</strong> directo en tu navegador.
+        Hola, soy <strong>Javier Galilea</strong>. Este es mi espacio central en la web: un punto de partida visual
+        desde el que construyo y publico subproyectos interactivos, simulaciones en <strong>Rust + WebAssembly</strong> y herramientas web.
       </p>
 
-      <!-- WASM Canvas Controls HUD -->
-      <div class="hud-panel glass-card">
-        <div class="hud-header">
-          <div class="hud-title">
-            <span class="hud-icon">🎮</span>
-            <span>Simulador de Partículas (Rust + WASM) — Mueve el ratón / Toca la pantalla</span>
+      <div class="hero-actions">
+        <a href="#proyectos" class="btn btn-primary">
+          <span>Explorar Subproyectos</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <polyline points="19 12 12 19 5 12"></polyline>
+          </svg>
+        </a>
+        <a href="particulas/" class="btn btn-glass">
+          <span>🦀 Lanzar Generador de Partículas</span>
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="7" y1="17" x2="17" y2="7"></line>
+            <polyline points="7 7 17 7 17 17"></polyline>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Mini Galería / Indicadores Visuales en el Hero -->
+      <div class="hero-showcase-strip">
+        <a href="particulas/" class="strip-card spotlight-card">
+          <div class="strip-icon">🦀</div>
+          <div class="strip-info">
+            <span class="strip-label">Subproyecto #01 · Activo</span>
+            <strong>Motor de Partículas WASM</strong>
           </div>
-          <div class="hud-stats">
-            <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
-            <span class="stat-pill"><strong id="wasmTime">0.12</strong> ms/frame</span>
+          <span class="strip-arrow">→</span>
+        </a>
+
+        <div class="strip-card spotlight-card">
+          <div class="strip-icon">⚡</div>
+          <div class="strip-info">
+            <span class="strip-label">Arquitectura</span>
+            <strong>Zero-Dependencies · 1.1 KB</strong>
           </div>
         </div>
 
-        <div class="hud-controls">
-          <div class="control-group">
-            <label>Modo de Fuerza:</label>
-            <div class="button-toggle-group">
-              <button class="toggle-btn active" data-mode="0">Atracción</button>
-              <button class="toggle-btn" data-mode="1">Repulsión</button>
-              <button class="toggle-btn" data-mode="2">Vórtice</button>
-            </div>
+        <a href="#proyectos" class="strip-card spotlight-card">
+          <div class="strip-icon">🧪</div>
+          <div class="strip-info">
+            <span class="strip-label">Laboratorio</span>
+            <strong>Nuevos Experimentos</strong>
           </div>
-
-          <div class="control-group">
-            <label for="particleSlider">Partículas: <span id="particleCountLabel">2,000</span></label>
-            <input type="range" id="particleSlider" min="500" max="8000" step="500" value="2000">
-          </div>
-
-          <div class="control-group">
-            <label>Tema de Color:</label>
-            <div class="button-toggle-group">
-              <button class="palette-btn active" data-palette="cyber">Cyber</button>
-              <button class="palette-btn" data-palette="plasma">Plasma</button>
-              <button class="palette-btn" data-palette="matrix">Matrix</button>
-            </div>
-          </div>
-        </div>
+          <span class="strip-arrow">↓</span>
+        </a>
       </div>
     </section>
 
-    <!-- WASM LIVE BENCHMARK -->
-    <section id="benchmark" class="section">
+    <!-- SECCIÓN DE SUBPROYECTOS (PORTAL VISUAL) -->
+    <section id="proyectos" class="section">
       <div class="section-header">
-        <span class="section-tag">Rendimiento en Vivo</span>
-        <h2>Rust (WASM) vs JavaScript</h2>
+        <span class="section-tag">Laboratorio & Creaciones</span>
+        <h2>Subproyectos Interactivos</h2>
         <p class="section-desc">
-          Comprobación en tiempo real en tu procesador. Calculamos 5 millones de términos de aproximación matemática
-          en un hilo sincrónico para comparar el código compilado de Rust frente al motor JS V8/SpiderMonkey.
+          Cada proyecto es una aplicación independiente alojada dentro de este dominio. Haz clic en cualquiera para abrir la experiencia a pantalla completa.
         </p>
       </div>
 
-      <div class="benchmark-grid">
-        <div class="bench-card glass-card">
-          <div class="bench-card-header">
-            <h3>Test de Cálculo Numérico</h3>
-            <span class="pill-badge">5,000,000 Iteraciones</span>
-          </div>
-          
-          <div class="bench-results">
-            <div class="result-row">
-              <div class="result-meta">
-                <span class="result-label"><span class="engine-tag wasm-tag">Rust WASM</span> WebAssembly Nativo</span>
-                <span class="result-time" id="wasmBenchTime">-- ms</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar wasm-bar" id="wasmBenchBar" style="width: 0%"></div>
-              </div>
+      <div class="projects-grid">
+        <!-- SUBPROYECTO #01: GENERADOR DE PARTÍCULAS (DESTACADO) -->
+        <article class="project-card featured-project spotlight-card">
+          <div class="project-visual">
+            <canvas id="previewParticlesCanvas" class="project-preview-canvas"></canvas>
+            <div class="visual-overlay-badges">
+              <span class="status-badge live"><span class="live-dot"></span> En Vivo</span>
+              <span class="tech-pill">Rust `#![no_std]` + WASM</span>
             </div>
+            <a href="particulas/" class="visual-play-overlay" aria-label="Abrir Generador de Partículas">
+              <span class="play-circle">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
+                  <polygon points="6 4 20 12 6 20 6 4"></polygon>
+                </svg>
+              </span>
+              <span class="play-text">Interactuar a pantalla completa</span>
+            </a>
+          </div>
 
-            <div class="result-row">
-              <div class="result-meta">
-                <span class="result-label"><span class="engine-tag js-tag">JS</span> JavaScript Puro</span>
-                <span class="result-time" id="jsBenchTime">-- ms</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar js-bar" id="jsBenchBar" style="width: 0%"></div>
-              </div>
+          <div class="project-body">
+            <div class="project-meta-top">
+              <span class="project-number">SUBPROYECTO #01</span>
+              <span class="project-path">/particulas/</span>
+            </div>
+            <h3>Generador de Partículas & Benchmark WASM</h3>
+            <p>
+              Simulador interactivo de física con hasta 8.000 partículas a 60 FPS gestionadas en memoria lineal directa desde Rust compilado a WebAssembly (1.1 KB). Incluye modos de fuerza (atracción, repulsión y vórtice), paletas de color y comparativa de rendimiento frente a JavaScript.
+            </p>
+            <div class="project-tags">
+              <span>Rust</span>
+              <span>WebAssembly</span>
+              <span>HTML5 Canvas</span>
+              <span>60 FPS</span>
+              <span>Benchmark</span>
+            </div>
+            <div class="project-actions">
+              <a href="particulas/" class="btn btn-primary btn-sm">
+                <span>Abrir Generador de Partículas</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </a>
             </div>
           </div>
+        </article>
 
-          <div class="bench-verdict" id="benchVerdict">
-            Pulsa el botón para ejecutar la prueba en tu navegador.
+        <!-- SUBPROYECTO #02: ESPACIO PARA EL PRÓXIMO SUBPROYECTO -->
+        <article class="project-card upcoming-project spotlight-card">
+          <div class="project-visual">
+            <canvas id="previewCellularCanvas" class="project-preview-canvas"></canvas>
+            <div class="visual-overlay-badges">
+              <span class="status-badge next">Próximo</span>
+              <span class="tech-pill">Simulación Visual</span>
+            </div>
           </div>
+          <div class="project-body">
+            <div class="project-meta-top">
+              <span class="project-number">SUBPROYECTO #02</span>
+              <span class="project-path">En diseño</span>
+            </div>
+            <h3>Autómatas & Vida Artificial</h3>
+            <p>
+              Espacio reservado para el siguiente experimento interactivo: sistemas emergentes, reglas celulares en tiempo real y patrones generativos sobre lienzo de alto rendimiento.
+            </p>
+            <div class="project-tags">
+              <span>Generativo</span>
+              <span>Algoritmos</span>
+              <span>Canvas 2D / WebGL</span>
+            </div>
+          </div>
+        </article>
 
-          <button id="runBenchBtn" class="btn btn-primary">
-            <span>⚡ Ejecutar Benchmark Ahora</span>
-          </button>
-        </div>
-
-        <div class="features-card glass-card">
-          <h3>¿Por qué Rust + WebAssembly?</h3>
-          <ul class="feature-list">
-            <li>
-              <div class="feature-icon">🦀</div>
-              <div>
-                <strong>Código Rust 100% Nativo:</strong>
-                <p>Escrito en Rust con <code>#![no_std]</code>, optimizado con LTO y compilado al target <code>wasm32-unknown-unknown</code>.</p>
-              </div>
-            </li>
-            <li>
-              <div class="feature-icon">🧠</div>
-              <div>
-                <strong>Memoria Lineal Compartida:</strong>
-                <p>Rust gestiona el buffer de datos de partículas directamente en memoria continua sin coste de recolección de basura.</p>
-              </div>
-            </li>
-            <li>
-              <div class="feature-icon">📦</div>
-              <div>
-                <strong>Binario de solo 1.1 KB:</strong>
-                <p>Carga en milisegundos con cero dependencias externas o paquetes pesados de npm.</p>
-              </div>
-            </li>
-          </ul>
-        </div>
+        <!-- SUBPROYECTO #03: ESPACIO PARA EL PRÓXIMO SUBPROYECTO -->
+        <article class="project-card upcoming-project spotlight-card">
+          <div class="project-visual">
+            <canvas id="previewWaveCanvas" class="project-preview-canvas"></canvas>
+            <div class="visual-overlay-badges">
+              <span class="status-badge next">Idea en cola</span>
+              <span class="tech-pill">Audio & Ondas</span>
+            </div>
+          </div>
+          <div class="project-body">
+            <div class="project-meta-top">
+              <span class="project-number">SUBPROYECTO #03</span>
+              <span class="project-path">En diseño</span>
+            </div>
+            <h3>Visualizador & Laboratorio de Ondas</h3>
+            <p>
+              Espacio preparado para un futuro módulo de síntesis visual, interferencia armónica y análisis de frecuencias interactivo directamente en el navegador.
+            </p>
+            <div class="project-tags">
+              <span>Web Audio API</span>
+              <span>Matemáticas</span>
+              <span>Interactivo</span>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 
-    <!-- SOBRE MÍ & DOMINIO -->
-    <section id="about" class="section">
+    <!-- SOBRE MÍ (BENTO GRID VISUAL) -->
+    <section id="sobre-mi" class="section">
       <div class="section-header">
-        <span class="section-tag">Perfil & Proyectos</span>
+        <span class="section-tag">Perfil & Filosofía</span>
         <h2>Sobre Javier Galilea</h2>
-        <p class="section-desc">
-          Ingeniería de software, desarrollo de productos modernos y experimentación tecnológica.
-        </p>
       </div>
 
-      <div class="about-grid">
-        <div class="glass-card about-card">
-          <div class="profile-avatar">JG</div>
-          <h3>Javier Galilea</h3>
-          <p class="role-text">Desarrollador de Software & Creador</p>
+      <div class="bento-grid">
+        <div class="bento-card bento-bio spotlight-card">
+          <div class="profile-header">
+            <div class="profile-avatar">JG</div>
+            <div>
+              <h3>Javier Galilea</h3>
+              <p class="role-text">Desarrollador de Software & Creador Digital</p>
+            </div>
+          </div>
           <p class="bio-text">
-            Apasionado por la construcción de herramientas rápidas, elegantes y robustas. Me entusiasma la intersección
-            entre el rendimiento de bajo nivel (Rust, WebAssembly, C++) y las experiencias interactivas modernas en la web.
+            Me apasiona crear software rápido, visual y cuidado al detalle. Disfruto combinando lenguajes de bajo nivel como <strong>Rust</strong> y <strong>WebAssembly</strong> con interfaces modernas y limpias que funcionan al instante en cualquier dispositivo.
           </p>
-
           <div class="skills-wrap">
             <span class="skill-chip">Rust</span>
             <span class="skill-chip">WebAssembly</span>
-            <span class="skill-chip">TypeScript</span>
-            <span class="skill-chip">JavaScript</span>
+            <span class="skill-chip">TypeScript / JS</span>
             <span class="skill-chip">Python</span>
             <span class="skill-chip">Node.js</span>
+            <span class="skill-chip">Gráficos & Canvas</span>
             <span class="skill-chip">Arquitectura Cloud</span>
-            <span class="skill-chip">UI/UX Interactiva</span>
           </div>
         </div>
 
-        <div class="glass-card domain-status-card">
-          <div class="domain-header">
-            <span class="domain-icon">🌐</span>
-            <div>
-              <h3>javiergalilea.es</h3>
-              <p class="domain-sub">Dominio oficial en producción</p>
-            </div>
-          </div>
-          
-          <div class="status-steps">
-            <div class="step-item completed">
-              <div class="step-circle">✓</div>
-              <div class="step-info">
-                <strong>Motor Rust + WASM</strong>
-                <span>Código fuente en Rust compilado a WebAssembly (1.1 KB)</span>
-              </div>
-            </div>
-            <div class="step-item completed">
-              <div class="step-circle">✓</div>
-              <div class="step-info">
-                <strong>Registro del Dominio .es</strong>
-                <span>Dominio oficial javiergalilea.es registrado y verificado</span>
-              </div>
-            </div>
-            <div class="step-item completed">
-              <div class="step-circle">✓</div>
-              <div class="step-info">
-                <strong>Despliegue & Certificado SSL</strong>
-                <span>DNS propagado y HTTPS activo en producción</span>
-              </div>
-            </div>
-          </div>
+        <div class="bento-card bento-metric spotlight-card">
+          <span class="bento-icon">🦀</span>
+          <div class="metric-value">1.1 KB</div>
+          <div class="metric-label">Motor WebAssembly Nativo</div>
+          <p>Compilado con <code>#![no_std]</code> sin dependencias pesadas para carga instantánea.</p>
+        </div>
 
-          <div class="domain-tip">
-            🚀 <em>Sitio desplegado y operativo en producción bajo <strong>https://javiergalilea.es</strong> con motor Rust + WebAssembly nativo.</em>
-          </div>
+        <div class="bento-card bento-metric spotlight-card">
+          <span class="bento-icon">🧩</span>
+          <div class="metric-value">Modular</div>
+          <div class="metric-label">Arquitectura por Subproyectos</div>
+          <p>Cada experimento vive en su propia ruta con su propio entorno visual dedicado.</p>
         </div>
       </div>
     </section>
 
     <!-- CONTACTO -->
-    <section id="contact" class="section">
-      <div class="glass-card contact-card">
-        <h2>¿Quieres ponerte en contacto?</h2>
+    <section id="contacto" class="section">
+      <div class="contact-card spotlight-card">
+        <span class="section-tag">Conectar</span>
+        <h2>¿Hablamos o colaboramos?</h2>
         <p>
-          Si quieres hablar sobre tecnología, proyectos o colaborar, puedes encontrarme en mis canales habituales:
+          Puedes ver el código fuente de mis experimentos o escribirme directamente a través de cualquiera de estos canales:
         </p>
 
         <div class="contact-links">
@@ -258,7 +277,7 @@
             <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
-            <span>GitHub</span>
+            <span>GitHub (@jjgg2018)</span>
           </a>
 
           <a href="https://linkedin.com" target="_blank" rel="noopener" class="contact-btn">
@@ -283,8 +302,8 @@
   <footer class="footer">
     <div class="footer-content">
       <p>© 2026 Javier Galilea · <strong>javiergalilea.es</strong></p>
-      <p class="wasm-credit">
-        🦀 Motor programado en Rust y compilado a WebAssembly nativo (1.1 KB).
+      <p class="footer-sub">
+        Construido desde cero con HTML5, CSS moderno y Rust + WebAssembly.
       </p>
     </div>
   </footer>

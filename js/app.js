@@ -1,334 +1,149 @@
 /**
- * Javier Galilea — Personal WASM Home
- * Canvas + WebAssembly Engine Integration
+ * Javier Galilea — Home Visual & Portal de Subproyectos
+ * javiergalilea.es
  */
 
 (function () {
   'use strict';
 
-  // --- STATE ---
-  let wasmInstance = null;
-  let wasmMemory = null;
-  let particlesOffset = 0;
-  let particleCount = 2000;
-  let currentMode = 0; // 0 = Attract, 1 = Repel, 2 = Vortex
-  let currentPalette = 'cyber';
-
-  const canvas = document.getElementById('wasmCanvas');
-  const ctx = canvas.getContext('2d', { alpha: false });
-
-  let width = 0;
-  let height = 0;
-  let dpr = 1;
-
-  let mouse = {
-    x: -1000,
-    y: -1000,
-    active: 0,
-    isDown: false
-  };
-
-  // Palettes (5 colors per theme)
-  const PALETTES = {
-    cyber: [
-      '#00f5d4', // Neon Cyan
-      '#7b2cbf', // Violet
-      '#3a86ff', // Electric Blue
-      '#ff006e', // Hot Pink
-      '#ffffff'  // Pure White
-    ],
-    plasma: [
-      '#ff007f', // Deep Rose
-      '#ff7b00', // Bright Orange
-      '#ffbe0b', // Solar Yellow
-      '#8338ec', // Violet
-      '#ffffff'
-    ],
-    matrix: [
-      '#00ff66', // Matrix Green
-      '#00cc44', // Darker Green
-      '#88ffaa', // Mint
-      '#00aa33', // Deep Forest
-      '#ffffff'
-    ]
-  };
-
-  // Performance tracking
-  let lastTime = performance.now();
-  let frameCount = 0;
-  let fpsTimer = 0;
-  let lastWasmDuration = 0;
-
-  const fpsEl = document.getElementById('fpsCounter');
-  const wasmTimeEl = document.getElementById('wasmTime');
-  const particleSlider = document.getElementById('particleSlider');
-  const particleCountLabel = document.getElementById('particleCountLabel');
-
-  // --- CANVAS RESIZING ---
-  function resizeCanvas() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    width = window.innerWidth;
-    height = window.innerHeight;
-
-    canvas.width = Math.floor(width * dpr);
-    canvas.height = Math.floor(height * dpr);
-
-    ctx.scale(dpr, dpr);
-
-    if (wasmInstance) {
-      wasmInstance.exports.init(particleCount, width, height);
-    }
-  }
-
-  // --- MOUSE & TOUCH LISTENERS ---
-  function setupInteractivity() {
+  // --- 1. SPOTLIGHT HOVER EFFECT ON CARDS ---
+  function setupSpotlightCards() {
+    const cards = document.querySelectorAll('.spotlight-card');
     window.addEventListener('mousemove', (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = 1;
-    });
-
-    window.addEventListener('mouseleave', () => {
-      mouse.active = 0;
-    });
-
-    window.addEventListener('mousedown', () => {
-      mouse.isDown = true;
-    });
-
-    window.addEventListener('mouseup', () => {
-      mouse.isDown = false;
-    });
-
-    // Touch events for mobile devices
-    window.addEventListener('touchstart', (e) => {
-      if (e.touches.length > 0) {
-        mouse.x = e.touches[0].clientX;
-        mouse.y = e.touches[0].clientY;
-        mouse.active = 1;
-        mouse.isDown = true;
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 0) {
-        mouse.x = e.touches[0].clientX;
-        mouse.y = e.touches[0].clientY;
-        mouse.active = 1;
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchend', () => {
-      mouse.active = 0;
-      mouse.isDown = false;
-    });
-
-    // HUD Mode buttons
-    document.querySelectorAll('.toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentMode = parseInt(btn.dataset.mode, 10);
-      });
-    });
-
-    // Palette buttons
-    document.querySelectorAll('.palette-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentPalette = btn.dataset.palette;
-      });
-    });
-
-    // Particle Slider
-    particleSlider.addEventListener('input', (e) => {
-      particleCount = parseInt(e.target.value, 10);
-      particleCountLabel.textContent = particleCount.toLocaleString('es-ES');
-      if (wasmInstance) {
-        wasmInstance.exports.init(particleCount, width, height);
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
       }
     });
   }
 
-  // --- ANIMATION LOOP ---
-  function render(now) {
-    const dt = Math.min((now - lastTime) / 1000, 0.1);
-    lastTime = now;
+  // --- 2. AMBIENT BACKGROUND CANVAS ---
+  function initAmbientBackground() {
+    const canvas = document.getElementById('ambientCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
 
-    // Background fade for light motion blur
-    ctx.fillStyle = 'rgba(8, 11, 17, 0.35)';
-    ctx.fillRect(0, 0, width, height);
+    let w = 0;
+    let h = 0;
+    const stars = [];
+    const STAR_COUNT = 65;
 
-    if (wasmInstance) {
-      // 1. WASM Physics Update & Time Profiling
-      const t0 = performance.now();
-      wasmInstance.exports.update(
-        particleCount,
-        width,
-        height,
-        mouse.x,
-        mouse.y,
-        mouse.active,
-        currentMode,
-        dt
-      );
-      const t1 = performance.now();
-      lastWasmDuration = (t1 - t0);
+    function resize() {
+      w = window.innerWidth;
+      h = window.innerHeight;
+      canvas.width = w;
+      canvas.height = h;
+    }
 
-      // 2. Read directly from WASM Linear Memory
-      // Memory layout per particle: [x, y, vx, vy, color_idx, size] = 6 floats
-      const buffer = wasmMemory.buffer;
-      const f32 = new Float32Array(buffer, particlesOffset, particleCount * 6);
-      const palette = PALETTES[currentPalette] || PALETTES.cyber;
+    for (let i = 0; i < STAR_COUNT; i++) {
+      stars.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+        r: Math.random() * 1.6 + 0.6,
+        alpha: Math.random() * 0.55 + 0.2
+      });
+    }
 
-      ctx.save();
-      // Render particles
-      for (let i = 0; i < particleCount; i++) {
-        const base = i * 6;
-        const px = f32[base];
-        const py = f32[base + 1];
-        const colorIdx = Math.floor(f32[base + 4]) % 5;
-        const size = f32[base + 5];
+    window.addEventListener('resize', resize);
+    resize();
 
-        ctx.fillStyle = palette[colorIdx];
+    function drawAmbient() {
+      ctx.clearRect(0, 0, w, h);
+
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        s.x += s.vx;
+        s.y += s.vy;
+
+        if (s.x < 0) s.x = w;
+        if (s.x > w) s.x = 0;
+        if (s.y < 0) s.y = h;
+        if (s.y > h) s.y = 0;
+
+        ctx.fillStyle = `rgba(148, 163, 184, ${s.alpha})`;
         ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
         ctx.fill();
-      }
 
-      // Constellation lines for subtle network effect when count <= 2500
-      if (particleCount <= 2500) {
-        ctx.lineWidth = 0.5;
-        const sampleStep = 3;
-        for (let i = 0; i < particleCount; i += sampleStep) {
-          const b1 = i * 6;
-          const x1 = f32[b1];
-          const y1 = f32[b1 + 1];
-
-          for (let j = i + sampleStep; j < Math.min(i + 35, particleCount); j += sampleStep) {
-            const b2 = j * 6;
-            const x2 = f32[b2];
-            const y2 = f32[b2 + 1];
-
-            const dx = x1 - x2;
-            const dy = y1 - y2;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < 3600) { // < 60px
-              const alpha = (1 - distSq / 3600) * 0.22;
-              ctx.strokeStyle = `rgba(0, 245, 212, ${alpha})`;
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-              ctx.stroke();
-            }
+        for (let j = i + 1; j < stars.length; j++) {
+          const s2 = stars[j];
+          const dx = s.x - s2.x;
+          const dy = s.y - s2.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < 18000) {
+            const lineAlpha = (1 - distSq / 18000) * 0.08;
+            ctx.strokeStyle = `rgba(0, 245, 212, ${lineAlpha})`;
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y);
+            ctx.lineTo(s2.x, s2.y);
+            ctx.stroke();
           }
         }
       }
 
-      ctx.restore();
+      requestAnimationFrame(drawAmbient);
     }
 
-    // FPS Meter
-    frameCount++;
-    fpsTimer += dt;
-    if (fpsTimer >= 0.5) {
-      const currentFps = Math.round(frameCount / fpsTimer);
-      if (fpsEl) fpsEl.textContent = currentFps;
-      if (wasmTimeEl) wasmTimeEl.textContent = lastWasmDuration.toFixed(2);
-      frameCount = 0;
-      fpsTimer = 0;
-    }
-
-    requestAnimationFrame(render);
+    requestAnimationFrame(drawAmbient);
   }
 
-  // --- BENCHMARK MODULE ---
-  function setupBenchmark() {
-    const runBtn = document.getElementById('runBenchBtn');
-    const wasmTimeResult = document.getElementById('wasmBenchTime');
-    const jsTimeResult = document.getElementById('jsBenchTime');
-    const wasmBar = document.getElementById('wasmBenchBar');
-    const jsBar = document.getElementById('jsBenchBar');
-    const verdict = document.getElementById('benchVerdict');
+  // --- 3. SUBPROJECT #01 LIVE WASM PREVIEW CANVAS ---
+  async function initParticlesPreview() {
+    const canvas = document.getElementById('previewParticlesCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { alpha: false });
 
-    // Identical mathematical loop in JS
-    function jsLeibnizPi(iterations) {
-      let sum = 0.0;
-      for (let i = 0; i < iterations; i++) {
-        const term = 1.0 / (2.0 * i + 1.0);
-        if ((i & 1) === 0) {
-          sum += term;
-        } else {
-          sum -= term;
-        }
+    let width = 0;
+    let height = 0;
+    let wasmInstance = null;
+    let wasmMemory = null;
+    let particlesOffset = 0;
+    const COUNT = 750;
+    const PALETTE = ['#00f5d4', '#7b2cbf', '#3a86ff', '#ff006e', '#ffffff'];
+
+    const mouse = { x: 0, y: 0, active: 0 };
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      width = Math.max(rect.width, 300);
+      height = Math.max(rect.height, 260);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (wasmInstance) {
+        wasmInstance.exports.init(COUNT, width, height);
       }
-      return sum * 4.0;
     }
 
-    runBtn.addEventListener('click', () => {
-      if (!wasmInstance) {
-        alert('Cargando módulo WebAssembly...');
-        return;
-      }
-
-      runBtn.disabled = true;
-      runBtn.innerHTML = '<span>⏳ Calculando...</span>';
-      verdict.textContent = 'Ejecutando 5 millones de ciclos...';
-
-      // Use setTimeout to allow UI to show running state
-      setTimeout(() => {
-        const ITERATIONS = 5000000;
-
-        // 1. Benchmark WASM
-        const w0 = performance.now();
-        const wasmPi = wasmInstance.exports.benchmark_calc(ITERATIONS);
-        const w1 = performance.now();
-        const wasmDuration = Math.max(w1 - w0, 0.01);
-
-        // 2. Benchmark JS
-        const j0 = performance.now();
-        const jsPi = jsLeibnizPi(ITERATIONS);
-        const j1 = performance.now();
-        const jsDuration = Math.max(j1 - j0, 0.01);
-
-        // Update UI
-        wasmTimeResult.textContent = `${wasmDuration.toFixed(1)} ms`;
-        jsTimeResult.textContent = `${jsDuration.toFixed(1)} ms`;
-
-        const maxDuration = Math.max(wasmDuration, jsDuration);
-        const wasmPercent = Math.min(100, Math.round((wasmDuration / maxDuration) * 100));
-        const jsPercent = Math.min(100, Math.round((jsDuration / maxDuration) * 100));
-
-        wasmBar.style.width = `${wasmPercent}%`;
-        jsBar.style.width = `${jsPercent}%`;
-
-        const speedup = (jsDuration / wasmDuration).toFixed(1);
-        if (wasmDuration <= jsDuration) {
-          verdict.innerHTML = `⚡ <strong>WebAssembly fue ${speedup}x más rápido</strong> que JavaScript nativo. (Pi aprox: ${wasmPi.toFixed(6)})`;
-        } else {
-          verdict.innerHTML = `⚡ Resultados: WASM en ${wasmDuration.toFixed(1)}ms vs JS en ${jsDuration.toFixed(1)}ms. (Pi: ${wasmPi.toFixed(6)})`;
-        }
-
-        runBtn.disabled = false;
-        runBtn.innerHTML = '<span>⚡ Repetir Benchmark</span>';
-      }, 50);
+    canvas.parentElement.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+      mouse.active = 1;
     });
-  }
 
-  // --- INITIALIZE WASM ---
-  const WASM_PATH = 'wasm/engine.wasm';
+    canvas.parentElement.addEventListener('mouseleave', () => {
+      mouse.active = 0;
+    });
 
-  async function initWasm() {
+    window.addEventListener('resize', resize);
+    resize();
+
     try {
+      const WASM_PATH = 'wasm/engine.wasm';
       let wasmModule;
       if (typeof WebAssembly.instantiateStreaming === 'function') {
         try {
           const res = await WebAssembly.instantiateStreaming(fetch(WASM_PATH));
           wasmModule = res.instance;
-        } catch (streamingErr) {
-          // Fallback if MIME type not application/wasm on local server
+        } catch (_) {
           const response = await fetch(WASM_PATH);
           const bytes = await response.arrayBuffer();
           const res = await WebAssembly.instantiate(bytes);
@@ -344,32 +159,135 @@
       wasmInstance = wasmModule;
       wasmMemory = wasmInstance.exports.memory;
       particlesOffset = wasmInstance.exports.get_memory_offset();
+      wasmInstance.exports.init(COUNT, width, height);
+    } catch (e) {
+      console.warn('WASM preview fallback:', e);
+    }
 
-      console.log('✅ WebAssembly engine loaded successfully!');
-      console.log('Available exports:', Object.keys(wasmInstance.exports));
+    let last = performance.now();
+    function renderPreview(now) {
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
 
-      // Initial particles population
-      wasmInstance.exports.init(particleCount, width, height);
+      ctx.fillStyle = 'rgba(5, 7, 12, 0.35)';
+      ctx.fillRect(0, 0, width, height);
 
-    } catch (err) {
-      console.error('Error loading WebAssembly:', err);
-      // Friendly banner if opened via file:// protocol
-      if (window.location.protocol === 'file:') {
-        const alertBox = document.createElement('div');
-        alertBox.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#ef4444;color:white;padding:12px 24px;border-radius:10px;z-index:9999;font-size:14px;box-shadow:0 10px 25px rgba(0,0,0,0.5);text-align:center;';
-        alertBox.innerHTML = '⚠️ Los navegadores bloquean la carga de WebAssembly bajo protocolo <code>file://</code>.<br>Usa un servidor local como <code>npx serve</code>.';
-        document.body.appendChild(alertBox);
+      if (wasmInstance) {
+        // Gentle automatic orbital attractor when mouse is not hovering
+        const mx = mouse.active ? mouse.x : width * 0.5 + Math.cos(now * 0.0012) * (width * 0.22);
+        const my = mouse.active ? mouse.y : height * 0.5 + Math.sin(now * 0.0016) * (height * 0.22);
+
+        wasmInstance.exports.update(COUNT, width, height, mx, my, 1, 2, dt);
+
+        const f32 = new Float32Array(wasmMemory.buffer, particlesOffset, COUNT * 6);
+        for (let i = 0; i < COUNT; i++) {
+          const base = i * 6;
+          const px = f32[base];
+          const py = f32[base + 1];
+          const colorIdx = Math.floor(f32[base + 4]) % 5;
+          const size = f32[base + 5];
+
+          ctx.fillStyle = PALETTE[colorIdx];
+          ctx.beginPath();
+          ctx.arc(px, py, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
+
+      requestAnimationFrame(renderPreview);
+    }
+
+    requestAnimationFrame(renderPreview);
+  }
+
+  // --- 4. SUBPROJECT #02 & #03 DECORATIVE VISUAL PREVIEWS ---
+  function initDecorativePreviews() {
+    // Subproject #02: Cellular Automata Grid Preview
+    const cellCanvas = document.getElementById('previewCellularCanvas');
+    if (cellCanvas) {
+      const ctx = cellCanvas.getContext('2d');
+      const cols = 22;
+      const rows = 12;
+
+      function drawCells(now) {
+        const rect = cellCanvas.parentElement.getBoundingClientRect();
+        if (cellCanvas.width !== Math.floor(rect.width)) {
+          cellCanvas.width = Math.floor(rect.width);
+          cellCanvas.height = Math.floor(rect.height);
+        }
+        const w = cellCanvas.width;
+        const h = cellCanvas.height;
+        ctx.fillStyle = '#05070c';
+        ctx.fillRect(0, 0, w, h);
+
+        const cellW = w / cols;
+        const cellH = h / rows;
+        const t = now * 0.002;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const wave = Math.sin(c * 0.45 + t) * Math.cos(r * 0.55 - t * 0.8);
+            if (wave > 0.15) {
+              const alpha = Math.min(0.85, (wave - 0.15) * 0.9);
+              ctx.fillStyle = wave > 0.55
+                ? `rgba(0, 245, 212, ${alpha})`
+                : `rgba(157, 78, 221, ${alpha * 0.7})`;
+              ctx.beginPath();
+              ctx.roundRect(c * cellW + 4, r * cellH + 4, cellW - 8, cellH - 8, 4);
+              ctx.fill();
+            }
+          }
+        }
+        requestAnimationFrame(drawCells);
+      }
+      requestAnimationFrame(drawCells);
+    }
+
+    // Subproject #03: Harmonic Waves Preview
+    const waveCanvas = document.getElementById('previewWaveCanvas');
+    if (waveCanvas) {
+      const ctx = waveCanvas.getContext('2d');
+
+      function drawWaves(now) {
+        const rect = waveCanvas.parentElement.getBoundingClientRect();
+        if (waveCanvas.width !== Math.floor(rect.width)) {
+          waveCanvas.width = Math.floor(rect.width);
+          waveCanvas.height = Math.floor(rect.height);
+        }
+        const w = waveCanvas.width;
+        const h = waveCanvas.height;
+        ctx.fillStyle = '#05070c';
+        ctx.fillRect(0, 0, w, h);
+
+        const t = now * 0.0025;
+        const lines = [
+          { color: 'rgba(0, 245, 212, 0.75)', amp: 28, freq: 0.018, speed: 1.0 },
+          { color: 'rgba(59, 130, 246, 0.65)', amp: 22, freq: 0.024, speed: -1.3 },
+          { color: 'rgba(157, 78, 221, 0.55)', amp: 34, freq: 0.012, speed: 0.7 }
+        ];
+
+        for (const l of lines) {
+          ctx.strokeStyle = l.color;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let x = 0; x <= w; x += 4) {
+            const y = h * 0.5
+              + Math.sin(x * l.freq + t * l.speed) * l.amp
+              * Math.sin((x / w) * Math.PI);
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        }
+        requestAnimationFrame(drawWaves);
+      }
+      requestAnimationFrame(drawWaves);
     }
   }
 
   // --- BOOTSTRAP ---
-  window.addEventListener('resize', resizeCanvas);
-  setupInteractivity();
-  setupBenchmark();
-  resizeCanvas();
-  initWasm();
-
-  requestAnimationFrame(render);
+  setupSpotlightCards();
+  initAmbientBackground();
+  initParticlesPreview();
+  initDecorativePreviews();
 })();
-

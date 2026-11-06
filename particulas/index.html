@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Partículas (Rust + WASM) — Javier Galilea</title>
+  <meta name="description" content="Simulador interactivo de física de partículas y benchmark en tiempo real impulsado por Rust (#![no_std]) y WebAssembly nativo.">
+  <link rel="canonical" href="https://javiergalilea.es/particulas/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>">
+  <link rel="stylesheet" href="particulas.css">
+</head>
+<body>
+  <!-- Lienzo Interactivo a Pantalla Completa -->
+  <canvas id="wasmCanvas"></canvas>
+
+  <!-- Barra Superior Flotante -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la página principal">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #01 · RUST + WASM</span>
+        <h1>Simulador de Partículas</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
+        <span class="stat-pill"><strong id="wasmTime">0.12</strong> ms</span>
+      </div>
+      <button id="toggleBenchModal" class="action-pill-btn">
+        <span>⚡ Benchmark WASM vs JS</span>
+      </button>
+      <button id="toggleHudBtn" class="icon-btn" title="Mostrar/Ocultar controles">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Indicador de Interacción -->
+  <div class="canvas-hint" id="canvasHint">
+    ✨ Mueve el cursor o toca la pantalla para interactuar con el campo de partículas
+  </div>
+
+  <!-- Panel de Control Flotante (Dock Inferior) -->
+  <aside class="hud-dock" id="hudDock">
+    <div class="hud-controls">
+      <div class="control-group">
+        <label>Campo de Fuerza</label>
+        <div class="button-toggle-group">
+          <button class="toggle-btn active" data-mode="0">Atracción</button>
+          <button class="toggle-btn" data-mode="1">Repulsión</button>
+          <button class="toggle-btn" data-mode="2">Vórtice</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="particleSlider">
+          <span>Cantidad de Partículas</span>
+          <strong id="particleCountLabel">2.500</strong>
+        </label>
+        <input type="range" id="particleSlider" min="500" max="8000" step="500" value="2500">
+      </div>
+
+      <div class="control-group">
+        <label>Paleta Visual</label>
+        <div class="button-toggle-group">
+          <button class="palette-btn active" data-palette="cyber">Cyber</button>
+          <button class="palette-btn" data-palette="plasma">Plasma</button>
+          <button class="palette-btn" data-palette="matrix">Matrix</button>
+          <button class="palette-btn" data-palette="aurora">Aurora</button>
+        </div>
+      </div>
+
+      <div class="control-group actions-group">
+        <label>Acciones</label>
+        <div class="button-toggle-group">
+          <button id="resetParticlesBtn" class="secondary-action-btn" title="Reiniciar posiciones">Reiniciar</button>
+          <button id="toggleLinesBtn" class="secondary-action-btn active" title="Activar/Desactivar constelaciones">Red</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal / Drawer de Benchmark Rust WASM vs JS -->
+  <div class="bench-modal-backdrop hidden" id="benchModal">
+    <div class="bench-modal">
+      <div class="bench-modal-header">
+        <div>
+          <span class="section-tag">Motor de Cálculo (`1.1 KB` WASM)</span>
+          <h2>Benchmark: Rust (WASM) vs JavaScript</h2>
+        </div>
+        <button id="closeBenchModal" class="close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <p class="bench-desc">
+        Calcula 5.000.000 de iteraciones de la serie matemática de Leibniz en tu procesador para comparar
+        el binario compilado desde Rust (<code>#![no_std]</code>) frente al motor JavaScript del navegador.
+      </p>
+
+      <div class="bench-results">
+        <div class="result-row">
+          <div class="result-meta">
+            <span class="result-label"><span class="engine-tag wasm-tag">Rust WASM</span> WebAssembly Nativo</span>
+            <span class="result-time" id="wasmBenchTime">-- ms</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar wasm-bar" id="wasmBenchBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="result-row">
+          <div class="result-meta">
+            <span class="result-label"><span class="engine-tag js-tag">JS</span> JavaScript Puro</span>
+            <span class="result-time" id="jsBenchTime">-- ms</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar js-bar" id="jsBenchBar" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bench-verdict" id="benchVerdict">
+        Pulsa el botón inferior para lanzar la comparativa en tiempo real.
+      </div>
+
+      <div class="bench-tech-specs">
+        <div class="spec-item">
+          <span>Binario WASM</span>
+          <strong>1.189 bytes</strong>
+        </div>
+        <div class="spec-item">
+          <span>Memoria</span>
+          <strong>Lineal compartida (`Float32Array`)</strong>
+        </div>
+        <div class="spec-item">
+          <span>Target</span>
+          <strong>`wasm32-unknown-unknown`</strong>
+        </div>
+      </div>
+
+      <button id="runBenchBtn" class="btn-primary">
+        <span>⚡ Ejecutar Benchmark (5M ciclos)</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="particulas.js"></script>
+</body>
+</html>

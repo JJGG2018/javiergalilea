@@ -32,11 +32,15 @@ javiergalilea/
 │   └── src/
 │       └── lib.rs    # Código Rust (física de partículas, LCG RNG, benchmark)
 ├── css/
-│   └── style.css     # Estilos, variables CSS y diseño responsive
+│   └── style.css        # Estilos de la Home visual y tarjetas Bento/Spotlight
 ├── js/
-│   └── app.js        # Integración de WASM, renderizado en canvas y benchmark
+│   └── app.js           # Previsualizaciones interactivas en vivo de la Home
+├── particulas/          # Subproyecto #01: Generador de Partículas & Benchmark WASM
+│   ├── index.html       # Aplicación a pantalla completa (/particulas/)
+│   ├── particulas.css   # Interfaz de laboratorio con HUD flotante
+│   └── particulas.js    # Controlador del simulador y modal de benchmark
 ├── wasm/
-│   └── engine.wasm   # Binario WebAssembly compilado desde Rust (1.1 KB)
+│   └── engine.wasm      # Binario WebAssembly compilado desde Rust (1.1 KB)
 ├── CNAME             # Dominio personalizado para GitHub Pages (javiergalilea.es)
 ├── index.html        # Página web principal
 ├── .gitignore        # Exclusiones de Git (target de Rust, temporales, etc.)
