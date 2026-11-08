@@ -1,97 +1,57 @@
-# javiergalilea.es — Rust & WebAssembly Personal Home
+# javiergalilea.es — Espacio Creativo & Proyectos
 
-Sitio web personal y carta de presentación para **[javiergalilea.es](https://javiergalilea.es)**, construido con arquitectura ultraligera sin frameworks pesados, impulsado por **Rust** (`#![no_std]`) compilado a **WebAssembly (WASM)** nativo y HTML5 Canvas.
+Sitio web personal y portal de experimentos interactivos para **[javiergalilea.es](https://javiergalilea.es)**.
 
----
-
-## ⚡ Características
-
-- **Motor programado en Rust (`no_std`) y compilado a WASM (1.1 KB):**
-  - Físicas de partículas en tiempo real con memoria lineal directa (`Float32Array`).
-  - Modos interactivos: **Atracción**, **Repulsión** y **Vórtice**.
-  - Simulación fluida de hasta 8,000+ partículas a 60 FPS.
-- **Benchmark Interactivo en Vivo:**
-  - Comparativa de cálculo numérico en tiempo real (aproximación matemática Leibniz Pi con 5,000,000 iteraciones) ejecutada en paralelo: **Rust (WASM) vs JavaScript**.
-- **Diseño Moderno & Responsivo:**
-  - Estética oscura con tarjetas de cristal esmerilado (*glassmorphism*), degradados de neón y tipografía limpia.
-  - Soporte completo para pantallas táctiles y Retina/HiDPI.
-- **Sin Dependencias de Runtimes Externos:**
-  - Solo Rust + Cargo para el motor y HTML5/CSS/JS nativo para la web.
+Cada subproyecto se encuentra **completamente encapsulado y aislado** en su propia carpeta, permitiendo que cada uno utilice la tecnología más adecuada (Rust/WebAssembly, Web Audio API, Canvas 2D/WebGL) de forma independiente.
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Arquitectura Encapsulada
 
 ```text
 javiergalilea/
-├── .cargo/
-│   └── config.toml   # Configuración de compilación (target wasm32-unknown-unknown por defecto)
-├── Cargo.toml        # Workspace de Cargo raíz con perfiles de optimización
-├── engine/           # Crate de Rust (código fuente del motor WASM)
-│   ├── Cargo.toml    # Definición de la biblioteca cdylib
-│   └── src/
-│       └── lib.rs    # Código Rust (física de partículas, LCG RNG, benchmark)
-├── css/
-│   └── style.css        # Estilos de la Home visual y tarjetas Bento/Spotlight
-├── js/
-│   └── app.js           # Previsualizaciones interactivas en vivo de la Home
-├── particulas/          # Subproyecto #01: Generador de Partículas & Benchmark WASM
-│   ├── index.html       # Aplicación a pantalla completa (/particulas/)
-│   ├── particulas.css   # Interfaz de laboratorio con HUD flotante
-│   └── particulas.js    # Controlador del simulador y modal de benchmark
-├── automata/            # Subproyecto #02: Autómata Celular & Vida Artificial
-│   ├── index.html       # Aplicación a pantalla completa (/automata/)
-│   ├── automata.css     # Estilos y controles
-│   └── automata.js      # Motor Conway, HighLife, Seeds y pincel interactivo
-├── ondas/               # Subproyecto #03: Laboratorio de Ondas & Audio
-│   ├── index.html       # Aplicación a pantalla completa (/ondas/)
-│   ├── ondas.css        # Estilos y controles
-│   └── ondas.js         # Síntesis acústica Web Audio API y figuras Lissajous
-├── wasm/
-│   └── engine.wasm      # Binario WebAssembly compilado desde Rust (1.1 KB)
-├── CNAME             # Dominio personalizado para GitHub Pages (javiergalilea.es)
-├── index.html        # Página web principal
-├── .gitignore        # Exclusiones de Git (target de Rust, temporales, etc.)
-└── README.md         # Documentación del proyecto
+├── index.html            # Portal principal / Portada
+├── css/style.css         # Estilos globales de la Home
+├── js/app.js             # Vistas previas ligeras para las tarjetas
+├── CNAME                 # Configuración de dominio para GitHub Pages
+├── Cargo.toml            # Cargo Workspace raíz para proyectos Rust
+│
+├── particulas/           # [Subproyecto 01: Físicas y Partículas]
+│   ├── index.html        # Experiencia a pantalla completa
+│   ├── particulas.css    # Interfaz y dock de controles
+│   ├── particulas.js     # Integración del motor
+│   ├── engine.wasm       # Binario compilado
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+├── automata/             # [Subproyecto 02: Autómatas & Vida Artificial]
+│   ├── index.html        # Experiencia a pantalla completa
+│   ├── automata.css      # Interfaz y dock de controles
+│   └── automata.js       # Motor de simulación celular y patrones
+│
+└── ondas/                # [Subproyecto 03: Ondas & Audio]
+    ├── index.html        # Experiencia a pantalla completa
+    ├── ondas.css         # Interfaz y dock de controles
+    └── ondas.js          # Síntesis acústica Web Audio API y figuras de Lissajous
 ```
 
 ---
 
-## 🦀 Compilación directa con Cargo
+## 🦀 Compilar subproyectos de Rust
 
-Gracias a la configuración de Cargo del repositorio, puedes compilar el motor WebAssembly desde la raíz con un solo comando:
+Desde la raíz del repositorio, gracias al Cargo Workspace:
 
 ```bash
 cargo build --release
 ```
 
-Y para copiar el binario generado a la carpeta web `wasm/`:
+Y para actualizar el binario en la carpeta del subproyecto:
 
 ```powershell
-Copy-Item target/wasm32-unknown-unknown/release/engine.wasm wasm/engine.wasm
+Copy-Item target/wasm32-unknown-unknown/release/engine.wasm particulas/engine.wasm
 ```
-
-### Funciones exportadas en Rust:
-- `get_memory_offset() -> *const Particle`: Puntero al array contiguo de partículas en la memoria lineal de WebAssembly.
-- `init(count: i32, width: f32, height: f32) -> i32`: Inicializa las partículas con posiciones y velocidades aleatorias.
-- `update(count: i32, width: f32, height: f32, mx: f32, my: f32, m_active: i32, mode: i32, dt: f32) -> i32`: Calcula la física y actualiza el estado.
-- `benchmark_calc(iterations: i32) -> f32`: Test intensivo de cálculo numérico en Rust compilado a WASM.
 
 ---
 
-## 🚀 Cómo probar la web en local
+## 🌐 Despliegue
 
-Para servir los archivos estáticos en tu máquina (evitando las restricciones del protocolo `file://` para WebAssembly):
-
-### Con Node / npx:
-```bash
-npx serve .
-```
-
-O cualquier otro servidor HTTP estático de tu preferencia.
-
----
-
-## 🌐 Despliegue en Producción (`javiergalilea.es`)
-
-El sitio se encuentra desplegado automáticamente mediante **GitHub Pages** con certificado SSL/HTTPS sobre el dominio **[javiergalilea.es](https://javiergalilea.es)** (configurado a través del archivo [`CNAME`](CNAME) en la raíz del repositorio y los registros DNS `A` y `CNAME` del dominio `.es`).
+El sitio se despliega de forma continua y automática en **GitHub Pages** al hacer push a la rama `main`, con soporte HTTPS nativo bajo **https://javiergalilea.es**.

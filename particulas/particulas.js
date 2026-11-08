@@ -336,7 +336,7 @@
     });
   }
 
-  const WASM_PATH = '../wasm/engine.wasm';
+  const WASM_PATH = 'engine.wasm';
 
   async function initWasm() {
     try {
