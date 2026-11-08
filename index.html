@@ -3,248 +3,144 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Javier Galilea — Laboratorio Digital & Proyectos</title>
-  <meta name="description" content="Espacio personal y laboratorio de subproyectos interactivos de Javier Galilea. Desarrollo de software, Rust, WebAssembly y experiencias visuales.">
+  <title>Javier Galilea — Espacio Creativo & Proyectos</title>
+  <meta name="description" content="Página personal y proyectos interactivos de Javier Galilea. Simulaciones visuales, código y diseño en la web.">
   <link rel="canonical" href="https://javiergalilea.es/">
-  <meta property="og:title" content="Javier Galilea — javiergalilea.es">
-  <meta property="og:description" content="Espacio personal y laboratorio de subproyectos interactivos de Javier Galilea.">
+  <meta property="og:title" content="Javier Galilea">
+  <meta property="og:description" content="Proyectos interactivos, simulaciones y creaciones digitales.">
   <meta property="og:url" content="https://javiergalilea.es/">
   <meta property="og:type" content="website">
-  <meta name="theme-color" content="#06080f">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <meta name="theme-color" content="#07090e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <!-- Fondo Ambiental Visual -->
+  <!-- Fondo ambiental interactivo suave -->
   <div class="ambient-bg">
     <canvas id="ambientCanvas"></canvas>
-    <div class="aurora-glow aurora-1"></div>
-    <div class="aurora-glow aurora-2"></div>
-    <div class="ambient-vignette"></div>
+    <div class="aurora aurora-1"></div>
+    <div class="aurora aurora-2"></div>
   </div>
 
-  <!-- Navegación Principal -->
+  <!-- Barra de navegación -->
   <header class="navbar">
     <div class="nav-content">
       <a href="#inicio" class="brand">
-        <span class="brand-monogram">JG</span>
-        <div class="brand-text">
-          <span class="brand-name">Javier Galilea</span>
-          <span class="brand-status"><span class="status-dot"></span> javiergalilea.es</span>
-        </div>
+        <span class="brand-badge">JG</span>
+        <span class="brand-name">Javier Galilea</span>
       </a>
       <nav class="nav-links">
-        <a href="#proyectos">Subproyectos</a>
+        <a href="#proyectos">Proyectos</a>
         <a href="#sobre-mi">Sobre mí</a>
-        <a href="#contacto">Contacto</a>
-        <a href="particulas/" class="nav-cta">🦀 Partículas WASM</a>
+        <a href="#contacto" class="nav-btn">Contacto</a>
       </nav>
     </div>
   </header>
 
   <main>
-    <!-- HERO VISUAL -->
-    <section id="inicio" class="hero-section">
-      <div class="hero-pill">
-        <span class="pulse-ring"></span>
-        <span>Laboratorio Personal · Código & Experiencias Interactivas</span>
+    <!-- HERO PRINCIPAL -->
+    <section id="inicio" class="hero">
+      <div class="hero-tag">
+        <span class="dot"></span>
+        <span>Espacio Personal</span>
       </div>
 
       <h1 class="hero-title">
-        Diseño visual, código nativo y <span class="gradient-text">experimentos en vivo</span>.
+        Hola, soy Javier.<br>
+        Creo <span class="gradient-text">experiencias interactivas</span> y software en la web.
       </h1>
 
       <p class="hero-subtitle">
-        Hola, soy <strong>Javier Galilea</strong>. Este es mi espacio central en la web: un punto de partida visual
-        desde el que construyo y publico subproyectos interactivos, simulaciones en <strong>Rust + WebAssembly</strong> y herramientas web.
+        Bienvenido a mi rincón digital. Aquí desarrollo proyectos visuales, simulaciones interactivas
+        y experimentos con los que puedes interactuar directamente desde tu navegador.
       </p>
 
       <div class="hero-actions">
         <a href="#proyectos" class="btn btn-primary">
-          <span>Explorar Subproyectos</span>
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <span>Ver proyectos interactivos</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
             <line x1="12" y1="5" x2="12" y2="19"></line>
             <polyline points="19 12 12 19 5 12"></polyline>
           </svg>
         </a>
-        <a href="particulas/" class="btn btn-glass">
-          <span>🦀 Lanzar Generador de Partículas</span>
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2">
-            <line x1="7" y1="17" x2="17" y2="7"></line>
-            <polyline points="7 7 17 7 17 17"></polyline>
-          </svg>
-        </a>
-      </div>
-
-      <!-- Mini Galería / Indicadores Visuales en el Hero -->
-      <div class="hero-showcase-strip">
-        <a href="particulas/" class="strip-card spotlight-card">
-          <div class="strip-icon">🦀</div>
-          <div class="strip-info">
-            <span class="strip-label">Subproyecto #01 · Activo</span>
-            <strong>Motor de Partículas WASM</strong>
-          </div>
-          <span class="strip-arrow">→</span>
-        </a>
-
-        <div class="strip-card spotlight-card">
-          <div class="strip-icon">⚡</div>
-          <div class="strip-info">
-            <span class="strip-label">Arquitectura</span>
-            <strong>Zero-Dependencies · 1.1 KB</strong>
-          </div>
-        </div>
-
-        <a href="#proyectos" class="strip-card spotlight-card">
-          <div class="strip-icon">🧪</div>
-          <div class="strip-info">
-            <span class="strip-label">Laboratorio</span>
-            <strong>Nuevos Experimentos</strong>
-          </div>
-          <span class="strip-arrow">↓</span>
+        <a href="#contacto" class="btn btn-secondary">
+          <span>Contactar</span>
         </a>
       </div>
     </section>
 
-    <!-- SECCIÓN DE SUBPROYECTOS (PORTAL VISUAL) -->
+    <!-- GALERÍA DE PROYECTOS (TODOS AL MISMO NIVEL) -->
     <section id="proyectos" class="section">
-      <div class="section-header">
-        <span class="section-tag">Laboratorio & Creaciones</span>
-        <h2>Subproyectos Interactivos</h2>
-        <p class="section-desc">
-          Cada proyecto es una aplicación independiente alojada dentro de este dominio. Haz clic en cualquiera para abrir la experiencia a pantalla completa.
-        </p>
+      <div class="section-intro">
+        <span class="section-badge">Explora</span>
+        <h2>Proyectos Interactivos</h2>
+        <p>Experimentos visuales y simulaciones en tiempo real. Pulsa en cualquiera para probarlo a pantalla completa.</p>
       </div>
 
       <div class="projects-grid">
-        <!-- SUBPROYECTO #01: GENERADOR DE PARTÍCULAS (DESTACADO) -->
-        <article class="project-card featured-project spotlight-card">
-          <div class="project-visual">
-            <canvas id="previewParticlesCanvas" class="project-preview-canvas"></canvas>
-            <div class="visual-overlay-badges">
-              <span class="status-badge live"><span class="live-dot"></span> En Vivo</span>
-              <span class="tech-pill">Rust `#![no_std]` + WASM</span>
-            </div>
-            <a href="particulas/" class="visual-play-overlay" aria-label="Abrir Generador de Partículas">
-              <span class="play-circle">
-                <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                  <polygon points="6 4 20 12 6 20 6 4"></polygon>
-                </svg>
-              </span>
-              <span class="play-text">Interactuar a pantalla completa</span>
-            </a>
+        <!-- PROYECTO 1: PARTÍCULAS -->
+        <article class="project-card">
+          <div class="card-visual">
+            <canvas id="thumbParticles"></canvas>
+            <div class="card-tag">Física en vivo</div>
           </div>
-
-          <div class="project-body">
-            <div class="project-meta-top">
-              <span class="project-number">SUBPROYECTO #01</span>
-              <span class="project-path">/particulas/</span>
-            </div>
-            <h3>Generador de Partículas & Benchmark WASM</h3>
+          <div class="card-body">
+            <span class="card-num">PROYECTO 01</span>
+            <h3>Simulador de Partículas</h3>
             <p>
-              Simulador interactivo de física con hasta 8.000 partículas a 60 FPS gestionadas en memoria lineal directa desde Rust compilado a WebAssembly (1.1 KB). Incluye modos de fuerza (atracción, repulsión y vórtice), paletas de color y comparativa de rendimiento frente a JavaScript.
+              Simulación de miles de partículas que reaccionan a tus movimientos. Experimenta con fuerzas de atracción, gravedad, vórtices y paletas dinámicas.
             </p>
-            <div class="project-tags">
-              <span>Rust</span>
-              <span>WebAssembly</span>
-              <span>HTML5 Canvas</span>
-              <span>60 FPS</span>
-              <span>Benchmark</span>
-            </div>
-            <div class="project-actions">
-              <a href="particulas/" class="btn btn-primary btn-sm">
-                <span>Abrir Generador de Partículas</span>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
+            <div class="card-footer">
+              <a href="particulas/" class="btn-card">
+                <span>Abrir simulador</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
               </a>
             </div>
           </div>
         </article>
 
-        <!-- SUBPROYECTO #02: AUTÓMATAS & VIDA ARTIFICIAL -->
-        <article class="project-card spotlight-card">
-          <div class="project-visual">
-            <canvas id="previewCellularCanvas" class="project-preview-canvas"></canvas>
-            <div class="visual-overlay-badges">
-              <span class="status-badge live"><span class="live-dot"></span> En Vivo</span>
-              <span class="tech-pill">Algoritmos Emergentes</span>
-            </div>
-            <a href="automata/" class="visual-play-overlay" aria-label="Abrir Autómata Celular">
-              <span class="play-circle">
-                <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                  <polygon points="6 4 20 12 6 20 6 4"></polygon>
-                </svg>
-              </span>
-              <span class="play-text">Interactuar a pantalla completa</span>
-            </a>
+        <!-- PROYECTO 2: AUTÓMATAS -->
+        <article class="project-card">
+          <div class="card-visual">
+            <canvas id="thumbAutomata"></canvas>
+            <div class="card-tag">Vida Artificial</div>
           </div>
-          <div class="project-body">
-            <div class="project-meta-top">
-              <span class="project-number">SUBPROYECTO #02</span>
-              <span class="project-path">/automata/</span>
-            </div>
-            <h3>Autómatas & Vida Artificial</h3>
+          <div class="card-body">
+            <span class="card-num">PROYECTO 02</span>
+            <h3>Autómatas Celulares</h3>
             <p>
-              Simulador interactivo del Juego de la Vida de Conway, HighLife, Seeds y Day & Night. Dibuja células vivas con el ratón o el dedo, inyecta patrones (Gosper Glider Gun, Púlsar) y visualiza degradados térmicos por longevidad celular.
+              Ecosistemas de vida artificial inspirados en el clásico Juego de la Vida. Siembra tus propias células, inyecta patrones y observa cómo evolucionan.
             </p>
-            <div class="project-tags">
-              <span>Juego de la Vida</span>
-              <span>Conway B3/S23</span>
-              <span>HighLife</span>
-              <span>Patrones Dinámicos</span>
-            </div>
-            <div class="project-actions">
-              <a href="automata/" class="btn btn-primary btn-sm">
-                <span>Abrir Autómata Celular</span>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
+            <div class="card-footer">
+              <a href="automata/" class="btn-card">
+                <span>Explorar autómatas</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
               </a>
             </div>
           </div>
         </article>
 
-        <!-- SUBPROYECTO #03: LABORATORIO DE ONDAS & AUDIO -->
-        <article class="project-card spotlight-card">
-          <div class="project-visual">
-            <canvas id="previewWaveCanvas" class="project-preview-canvas"></canvas>
-            <div class="visual-overlay-badges">
-              <span class="status-badge live"><span class="live-dot"></span> En Vivo</span>
-              <span class="tech-pill">Web Audio API + Visual</span>
-            </div>
-            <a href="ondas/" class="visual-play-overlay" aria-label="Abrir Laboratorio de Ondas">
-              <span class="play-circle">
-                <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor">
-                  <polygon points="6 4 20 12 6 20 6 4"></polygon>
-                </svg>
-              </span>
-              <span class="play-text">Interactuar a pantalla completa</span>
-            </a>
+        <!-- PROYECTO 3: ONDAS Y AUDIO -->
+        <article class="project-card">
+          <div class="card-visual">
+            <canvas id="thumbWaves"></canvas>
+            <div class="card-tag">Sonido & Armónicos</div>
           </div>
-          <div class="project-body">
-            <div class="project-meta-top">
-              <span class="project-number">SUBPROYECTO #03</span>
-              <span class="project-path">/ondas/</span>
-            </div>
-            <h3>Visualizador & Laboratorio de Ondas</h3>
+          <div class="card-body">
+            <span class="card-num">PROYECTO 03</span>
+            <h3>Ondas & Laboratorio de Sonido</h3>
             <p>
-              Módulo interactivo de síntesis sonora acústica y figuras visuales en tiempo real. Modos armónicos, figuras de Lissajous, patrones radiales e interferencias de fase moduladas con el movimiento del ratón.
+              Síntesis acústica y figuras geométricas que puedes modular con el cursor. Genera tonos armónicos, patrones de Lissajous y frecuencias en vivo.
             </p>
-            <div class="project-tags">
-              <span>Web Audio API</span>
-              <span>Lissajous</span>
-              <span>Síntesis Aditiva</span>
-              <span>Interferencias</span>
-            </div>
-            <div class="project-actions">
-              <a href="ondas/" class="btn btn-primary btn-sm">
-                <span>Abrir Laboratorio de Ondas</span>
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
+            <div class="card-footer">
+              <a href="ondas/" class="btn-card">
+                <span>Generar ondas</span>
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
                 </svg>
               </a>
             </div>
@@ -253,82 +149,57 @@
       </div>
     </section>
 
-    <!-- SOBRE MÍ (BENTO GRID VISUAL) -->
+    <!-- SOBRE MÍ -->
     <section id="sobre-mi" class="section">
-      <div class="section-header">
-        <span class="section-tag">Perfil & Filosofía</span>
-        <h2>Sobre Javier Galilea</h2>
-      </div>
-
-      <div class="bento-grid">
-        <div class="bento-card bento-bio spotlight-card">
-          <div class="profile-header">
-            <div class="profile-avatar">JG</div>
-            <div>
-              <h3>Javier Galilea</h3>
-              <p class="role-text">Desarrollador de Software & Creador Digital</p>
-            </div>
-          </div>
-          <p class="bio-text">
-            Me apasiona crear software rápido, visual y cuidado al detalle. Disfruto combinando lenguajes de bajo nivel como <strong>Rust</strong> y <strong>WebAssembly</strong> con interfaces modernas y limpias que funcionan al instante en cualquier dispositivo.
+      <div class="about-card">
+        <div class="about-avatar">JG</div>
+        <div class="about-content">
+          <span class="section-badge">Sobre mí</span>
+          <h2>Javier Galilea</h2>
+          <p class="about-lead">
+            Desarrollador de software enfocado en crear herramientas prácticas, interfaces atractivas y experiencias interactivas en la web.
           </p>
-          <div class="skills-wrap">
-            <span class="skill-chip">Rust</span>
-            <span class="skill-chip">WebAssembly</span>
-            <span class="skill-chip">TypeScript / JS</span>
-            <span class="skill-chip">Python</span>
-            <span class="skill-chip">Node.js</span>
-            <span class="skill-chip">Gráficos & Canvas</span>
-            <span class="skill-chip">Arquitectura Cloud</span>
+          <p class="about-text">
+            Me gusta explorar la tecnología combinando rendimiento y simplicidad visual. Este dominio es mi cuaderno de proyectos abierto, donde pruebo ideas y comparto lo que construyo.
+          </p>
+          <div class="about-interests">
+            <span class="interest-pill">Desarrollo Web</span>
+            <span class="interest-pill">Gráficos & Animación</span>
+            <span class="interest-pill">Rust</span>
+            <span class="interest-pill">Diseño UI/UX</span>
+            <span class="interest-pill">Sistemas Cloud</span>
           </div>
-        </div>
-
-        <div class="bento-card bento-metric spotlight-card">
-          <span class="bento-icon">🦀</span>
-          <div class="metric-value">1.1 KB</div>
-          <div class="metric-label">Motor WebAssembly Nativo</div>
-          <p>Compilado con <code>#![no_std]</code> sin dependencias pesadas para carga instantánea.</p>
-        </div>
-
-        <div class="bento-card bento-metric spotlight-card">
-          <span class="bento-icon">🧩</span>
-          <div class="metric-value">Modular</div>
-          <div class="metric-label">Arquitectura por Subproyectos</div>
-          <p>Cada experimento vive en su propia ruta con su propio entorno visual dedicado.</p>
         </div>
       </div>
     </section>
 
     <!-- CONTACTO -->
     <section id="contacto" class="section">
-      <div class="contact-card spotlight-card">
-        <span class="section-tag">Conectar</span>
-        <h2>¿Hablamos o colaboramos?</h2>
+      <div class="contact-box">
+        <span class="section-badge">Hablemos</span>
+        <h2>¿Quieres ponerte en contacto?</h2>
         <p>
-          Puedes ver el código fuente de mis experimentos o escribirme directamente a través de cualquiera de estos canales:
+          Si te ha gustado algún proyecto, tienes una propuesta o simplemente quieres saludar, puedes escribirme o seguirme en mis perfiles:
         </p>
-
-        <div class="contact-links">
-          <a href="https://github.com/jjgg2018" target="_blank" rel="noopener" class="contact-btn">
-            <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+        <div class="contact-buttons">
+          <a href="mailto:contacto@javiergalilea.es" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+            <span>contacto@javiergalilea.es</span>
+          </a>
+          <a href="https://github.com/jjgg2018" target="_blank" rel="noopener" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
             <span>GitHub (@jjgg2018)</span>
           </a>
-
-          <a href="https://linkedin.com" target="_blank" rel="noopener" class="contact-btn">
-            <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <a href="https://linkedin.com" target="_blank" rel="noopener" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 8.76a1.53 1.53 0 1 0 0-3.06 1.53 1.53 0 0 0 0 3.06m1.39 9.74v-8.37H5.07v8.37h2.78z"/>
             </svg>
             <span>LinkedIn</span>
-          </a>
-
-          <a href="mailto:contacto@javiergalilea.es" class="contact-btn">
-            <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
-            <span>contacto@javiergalilea.es</span>
           </a>
         </div>
       </div>
@@ -336,12 +207,7 @@
   </main>
 
   <footer class="footer">
-    <div class="footer-content">
-      <p>© 2026 Javier Galilea · <strong>javiergalilea.es</strong></p>
-      <p class="footer-sub">
-        Construido desde cero con HTML5, CSS moderno y Rust + WebAssembly.
-      </p>
-    </div>
+    <p>© 2026 Javier Galilea · <strong>javiergalilea.es</strong></p>
   </footer>
 
   <script src="js/app.js"></script>
