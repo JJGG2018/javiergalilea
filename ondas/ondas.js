@@ -1,5 +1,5 @@
 /**
- * Subproyecto #03: Laboratorio de Ondas & Audio
+ * Subproyecto #03: Laboratorio de Ondas & Audio (Rust + WASM)
  * javiergalilea.es/ondas/
  */
 
@@ -9,17 +9,19 @@
   const canvas = document.getElementById('waveCanvas');
   const ctx = canvas.getContext('2d');
 
+  let wasmInstance = null;
+  let wasmMemory = null;
+  let waveBufferPtr = 0;
+
   let width = 0;
   let height = 0;
 
-  // Parámetros de onda
-  let currentMode = 'harmonic'; // 'harmonic', 'lissajous', 'radial', 'interference'
+  let currentMode = 'harmonic';
   let currentPalette = 'spectral';
   let harmonicCount = 4;
-  let baseFreq = 220; // Hz
+  let baseFreq = 220;
   let waveType = 'sine';
 
-  // Modulación por cursor
   let mouse = {
     x: 0,
     y: 0,
@@ -28,13 +30,11 @@
     ampMod: 1.0
   };
 
-  // Web Audio API
   let audioCtx = null;
   let masterGain = null;
   let oscillators = [];
   let isAudioEnabled = false;
 
-  // UI
   const audioStatus = document.getElementById('audioStatus');
   const freqReadout = document.getElementById('freqReadout');
   const fpsCounter = document.getElementById('fpsCounter');
@@ -49,7 +49,6 @@
   const hudDock = document.getElementById('hudDock');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
 
-  // Paletas visuales
   const PALETTES = {
     spectral: ['#00f5d4', '#00bbf9', '#3b82f6', '#8338ec', '#f72585', '#fee440'],
     synthwave: ['#f72585', '#7209b7', '#3a0ca3', '#4361ee', '#4cc9f0'],
@@ -66,7 +65,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  // --- AUDIO SYNTHESIS ENGINE ---
+  // Audio Engine
   function initAudio() {
     if (audioCtx) return;
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -82,7 +81,6 @@
   function rebuildOscillators() {
     if (!audioCtx) return;
 
-    // Detener y desconectar anteriores
     for (const osc of oscillators) {
       try {
         osc.stop();
@@ -97,11 +95,9 @@
       const gain = audioCtx.createGain();
 
       osc.type = waveType;
-      // Frecuencia armónica
       const targetFreq = baseFreq * i * mouse.freqMod;
       osc.frequency.setValueAtTime(Math.min(targetFreq, 18000), now);
 
-      // Decaimiento exponencial por armónico
       const armGain = (1 / (i * 1.4)) * 0.15;
       gain.gain.setValueAtTime(armGain, now);
 
@@ -129,12 +125,8 @@
   }
 
   function toggleAudio() {
-    if (!audioCtx) {
-      initAudio();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+    if (!audioCtx) initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 
     isAudioEnabled = !isAudioEnabled;
     const now = audioCtx.currentTime;
@@ -152,144 +144,87 @@
     }
   }
 
-  // --- RENDERIZADO VISUAL DE ONDAS ---
+  // Renderizado consumiendo buffer calculado en Rust
   function render(time) {
     ctx.fillStyle = 'rgba(6, 8, 14, 0.25)';
     ctx.fillRect(0, 0, width, height);
 
+    if (!wasmInstance || !wasmMemory) return;
+
     const t = time * 0.002;
     const colors = PALETTES[currentPalette] || PALETTES.spectral;
     const effectiveFreq = baseFreq * mouse.freqMod;
+    const samples = Math.min(Math.floor(width / 2), 1024);
 
     if (currentMode === 'harmonic') {
-      drawHarmonics(t, colors, effectiveFreq);
-    } else if (currentMode === 'lissajous') {
-      drawLissajous(t, colors);
-    } else if (currentMode === 'radial') {
-      drawRadial(t, colors);
-    } else if (currentMode === 'interference') {
-      drawInterference(t, colors);
-    }
-  }
+      for (let h = 1; h <= harmonicCount; h++) {
+        const col = colors[(h - 1) % colors.length];
+        const count = wasmInstance.exports.calculate_harmonics(
+          samples,
+          width,
+          height,
+          effectiveFreq,
+          h,
+          t,
+          mouse.ampMod
+        );
 
-  function drawHarmonics(t, colors, f) {
-    const cy = height * 0.5;
-    const step = 2;
-    const baseAmp = 45 * mouse.ampMod;
+        const f32 = new Float32Array(wasmMemory.buffer, waveBufferPtr, count * 2);
 
-    for (let h = 1; h <= harmonicCount; h++) {
-      const col = colors[(h - 1) % colors.length];
-      const amp = baseAmp / (h * 0.65);
-      const freqScale = (f * 0.0003) * h;
-      const speed = h * 0.9;
+        ctx.beginPath();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = Math.max(1.2, 3.2 - h * 0.4);
 
-      ctx.beginPath();
-      ctx.strokeStyle = col;
-      ctx.lineWidth = Math.max(1.2, 3.2 - h * 0.4);
-
-      for (let x = 0; x <= width; x += step) {
-        // Envolvente gaussiana en los extremos de la pantalla
-        const edgeWindow = Math.sin((x / width) * Math.PI);
-        const y = cy + Math.sin(x * freqScale + t * speed) * amp * edgeWindow;
-
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-  }
-
-  function drawLissajous(t, colors) {
-    const cx = width * 0.5;
-    const cy = height * 0.5;
-    const radiusX = Math.min(width, height) * 0.35 * mouse.ampMod;
-    const radiusY = Math.min(width, height) * 0.35;
-    const samples = 600;
-
-    const a = harmonicCount;
-    const b = Math.max(1, Math.round(harmonicCount * mouse.freqMod * 1.5));
-    const delta = t * 1.2;
-
-    for (let c = 0; c < 3; c++) {
-      const col = colors[c % colors.length];
-      const phaseOffset = (c * Math.PI) / 6;
-
-      ctx.beginPath();
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 2;
-
-      for (let i = 0; i <= samples; i++) {
-        const theta = (i / samples) * Math.PI * 2;
-        const x = cx + radiusX * Math.sin(a * theta + delta + phaseOffset);
-        const y = cy + radiusY * Math.sin(b * theta);
-
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-    }
-  }
-
-  function drawRadial(t, colors) {
-    const cx = width * 0.5;
-    const cy = height * 0.5;
-    const baseR = Math.min(width, height) * 0.22;
-    const points = 360;
-
-    for (let h = 1; h <= Math.min(harmonicCount, 6); h++) {
-      const col = colors[(h - 1) % colors.length];
-      const amp = (28 * mouse.ampMod) / h;
-      const freq = h * 3;
-
-      ctx.beginPath();
-      ctx.strokeStyle = col;
-      ctx.lineWidth = 1.8;
-
-      for (let i = 0; i <= points; i++) {
-        const rad = (i / points) * Math.PI * 2;
-        const offset = Math.sin(rad * freq + t * (h * 1.2)) * amp;
-        const r = baseR * (0.6 + h * 0.25) + offset;
-        const x = cx + Math.cos(rad) * r;
-        const y = cy + Math.sin(rad) * r;
-
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
-  }
-
-  function drawInterference(t, colors) {
-    const step = 14;
-    const cx1 = width * 0.35;
-    const cy1 = height * 0.5;
-    const cx2 = width * 0.65;
-    const cy2 = height * 0.5;
-
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= width; x += step) {
-      for (let y = 0; y <= height; y += step) {
-        const d1 = Math.hypot(x - cx1, y - cy1);
-        const d2 = Math.hypot(x - cx2, y - cy2);
-
-        const v1 = Math.sin(d1 * 0.04 - t * 3);
-        const v2 = Math.sin(d2 * 0.04 * mouse.freqMod - t * 3);
-        const combined = (v1 + v2) * 0.5;
-
-        if (Math.abs(combined) > 0.4) {
-          const colIdx = Math.floor(Math.abs(combined) * colors.length) % colors.length;
-          ctx.fillStyle = colors[colIdx];
-          const sz = Math.abs(combined) * 4.5 * mouse.ampMod;
-          ctx.beginPath();
-          ctx.arc(x, y, sz, 0, Math.PI * 2);
-          ctx.fill();
+        for (let i = 0; i < count; i++) {
+          const x = f32[i * 2];
+          const y = f32[i * 2 + 1];
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
+        ctx.stroke();
+      }
+    } else if (currentMode === 'lissajous') {
+      const cx = width * 0.5;
+      const cy = height * 0.5;
+      const rx = Math.min(width, height) * 0.35 * mouse.ampMod;
+      const ry = Math.min(width, height) * 0.35;
+      const a = harmonicCount;
+      const b = Math.max(1, Math.round(harmonicCount * mouse.freqMod * 1.5));
+      const delta = t * 1.2;
+
+      for (let c = 0; c < 3; c++) {
+        const col = colors[c % colors.length];
+        const phaseOffset = (c * Math.PI) / 6;
+
+        const count = wasmInstance.exports.calculate_lissajous(
+          600,
+          cx,
+          cy,
+          rx,
+          ry,
+          a,
+          b,
+          delta + phaseOffset
+        );
+
+        const f32 = new Float32Array(wasmMemory.buffer, waveBufferPtr, count * 2);
+
+        ctx.beginPath();
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 2;
+
+        for (let i = 0; i < count; i++) {
+          const x = f32[i * 2];
+          const y = f32[i * 2 + 1];
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
       }
     }
   }
 
-  // --- LOOP PRINCIPAL ---
+  // Loop
   let lastTime = performance.now();
   let frameCount = 0;
   let fpsTimer = 0;
@@ -311,7 +246,6 @@
     requestAnimationFrame(loop);
   }
 
-  // --- EVENTOS ---
   function setupEvents() {
     window.addEventListener('resize', resize);
 
@@ -320,7 +254,6 @@
       mouse.y = e.clientY;
       mouse.active = true;
 
-      // Mapeo interactivo: X modula frecuencia (0.5x - 2.0x), Y modula amplitud (0.3x - 1.8x)
       mouse.freqMod = 0.5 + (e.clientX / width) * 1.5;
       mouse.ampMod = 1.8 - (e.clientY / height) * 1.5;
 
@@ -331,19 +264,6 @@
       }
     });
 
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 0) {
-        const touch = e.touches[0];
-        mouse.x = touch.clientX;
-        mouse.y = touch.clientY;
-        mouse.active = true;
-        mouse.freqMod = 0.5 + (touch.clientX / width) * 1.5;
-        mouse.ampMod = 1.8 - (touch.clientY / height) * 1.5;
-        updateAudioFrequencies();
-      }
-    }, { passive: true });
-
-    // Modos
     document.querySelectorAll('.mode-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -352,7 +272,6 @@
       });
     });
 
-    // Paletas
     document.querySelectorAll('.palette-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
@@ -361,7 +280,6 @@
       });
     });
 
-    // Timbre
     document.querySelectorAll('.wave-type-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.wave-type-btn').forEach(b => b.classList.remove('active'));
@@ -371,7 +289,6 @@
       });
     });
 
-    // Sliders
     harmonicsSlider.addEventListener('input', (e) => {
       harmonicCount = parseInt(e.target.value, 10);
       harmonicsLabel.textContent = `${harmonicCount} capas`;
@@ -384,15 +301,12 @@
       updateAudioFrequencies();
     });
 
-    // Audio
     toggleAudioBtn.addEventListener('click', toggleAudio);
 
-    // Toggle HUD
     toggleHudBtn.addEventListener('click', () => {
       hudDock.classList.toggle('collapsed');
     });
 
-    // Pantalla completa
     if (fullscreenBtn) {
       fullscreenBtn.addEventListener('click', () => {
         if (!document.fullscreenElement) {
@@ -404,8 +318,23 @@
     }
   }
 
+  async function initWasm() {
+    try {
+      const res = await fetch('engine.wasm');
+      const bytes = await res.arrayBuffer();
+      const module = await WebAssembly.instantiate(bytes);
+      wasmInstance = module.instance;
+      wasmMemory = wasmInstance.exports.memory;
+      waveBufferPtr = wasmInstance.exports.get_wave_buffer_ptr();
+
+      console.log('✅ ondas_engine.wasm (Rust) cargado.');
+    } catch (err) {
+      console.error('Error cargando ondas_engine.wasm:', err);
+    }
+  }
+
   resize();
   setupEvents();
+  initWasm();
   requestAnimationFrame(loop);
 })();
-
