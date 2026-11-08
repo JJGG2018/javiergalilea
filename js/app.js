@@ -244,10 +244,56 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 6. MINIATURA VIVA: FRACTALES (P05) ---
+  function initThumbFractals() {
+    const canvas = document.getElementById('thumbFractals');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = 'rgba(5, 7, 12, 0.32)';
+      ctx.fillRect(0, 0, w, h);
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const t = now * 0.0018;
+      const arms = 5;
+      const pointsPerArm = 26;
+      const maxR = Math.min(w, h) * 0.42;
+      const palette = ['#00f5d4', '#3b82f6', '#9d4edd', '#f72585'];
+
+      for (let a = 0; a < arms; a++) {
+        const baseAngle = (a * Math.PI * 2) / arms + t * 0.7;
+        for (let i = 1; i <= pointsPerArm; i++) {
+          const frac = i / pointsPerArm;
+          const r = frac * maxR;
+          const spiral = baseAngle + frac * 4.2 + Math.sin(t + frac * 6.0) * 0.35;
+          const x = cx + Math.cos(spiral) * r;
+          const y = cy + Math.sin(spiral) * r * 0.82;
+
+          ctx.fillStyle = palette[(i + a) % palette.length];
+          ctx.beginPath();
+          ctx.arc(x, y, (1 - frac * 0.5) * 2.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
   initThumbAutomata();
   initThumbWaves();
   initThumbDevice();
+  initThumbFractals();
 })();

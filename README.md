@@ -37,11 +37,18 @@ javiergalilea/
 │   ├── engine.wasm       # Binario compilado
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_dispositivo/       # [Subproyecto 04: Telemetría & Hardware]
-    ├── index.html        # Panel de auditoría de hardware y sensores
-    ├── dispositivo.css   # Estilos Bento Grid y HUD
-    ├── dispositivo.js    # Lectura de APIs nativas y permisos
-    ├── engine.wasm       # Motor de puntuación y benchmark en Rust
+├── pr_dispositivo/       # [Subproyecto 04: Telemetría & Hardware]
+│   ├── index.html        # Panel de auditoría de hardware y sensores
+│   ├── dispositivo.css   # Estilos Bento Grid y HUD
+│   ├── dispositivo.js    # Lectura de APIs nativas y permisos
+│   ├── engine.wasm       # Motor de puntuación y benchmark en Rust
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_fractales/         # [Subproyecto 05: Fractales & Caos]
+    ├── index.html        # Experiencia a pantalla completa
+    ├── fractales.css     # Interfaz y dock de controles
+    ├── fractales.js      # Cámara compleja, zoom y renderizado RGBA
+    ├── engine.wasm       # Binario compilado (Mandelbrot, Julia, Ship, Tricorn)
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 

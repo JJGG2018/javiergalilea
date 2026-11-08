@@ -4,6 +4,7 @@ members = [
   "pr_automata/engine",
   "pr_ondas/engine",
   "pr_dispositivo/engine",
+  "pr_fractales/engine",
 ]
 resolver = "2"
 
