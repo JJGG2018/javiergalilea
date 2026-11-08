@@ -1,8 +1,8 @@
 [workspace]
 members = [
-  "particulas/engine",
-  "automata/engine",
-  "ondas/engine",
+  "pr_particulas/engine",
+  "pr_automata/engine",
+  "pr_ondas/engine",
 ]
 resolver = "2"
 

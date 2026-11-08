@@ -162,3 +162,4 @@ pub extern "C" fn step_generation() -> u32 {
         alive_count
     }
 }
+

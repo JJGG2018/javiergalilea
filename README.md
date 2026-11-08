@@ -16,22 +16,26 @@ javiergalilea/
 ├── CNAME                 # Configuración de dominio para GitHub Pages
 ├── Cargo.toml            # Cargo Workspace raíz para proyectos Rust
 │
-├── particulas/           # [Subproyecto 01: Físicas y Partículas]
+├── pr_particulas/        # [Subproyecto 01: Físicas y Partículas]
 │   ├── index.html        # Experiencia a pantalla completa
 │   ├── particulas.css    # Interfaz y dock de controles
 │   ├── particulas.js     # Integración del motor
 │   ├── engine.wasm       # Binario compilado
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-├── automata/             # [Subproyecto 02: Autómatas & Vida Artificial]
+├── pr_automata/          # [Subproyecto 02: Autómatas & Vida Artificial]
 │   ├── index.html        # Experiencia a pantalla completa
 │   ├── automata.css      # Interfaz y dock de controles
-│   └── automata.js       # Motor de simulación celular y patrones
+│   ├── automata.js       # Integración del motor
+│   ├── engine.wasm       # Binario compilado
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── ondas/                # [Subproyecto 03: Ondas & Audio]
+└── pr_ondas/             # [Subproyecto 03: Ondas & Audio]
     ├── index.html        # Experiencia a pantalla completa
     ├── ondas.css         # Interfaz y dock de controles
-    └── ondas.js          # Síntesis acústica Web Audio API y figuras de Lissajous
+    ├── ondas.js          # Síntesis acústica Web Audio API y figuras
+    ├── engine.wasm       # Binario compilado
+    └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 
 ---
