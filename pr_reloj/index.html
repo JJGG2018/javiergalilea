@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reloj Cósmico & Túnel — Javier Galilea</title>
+  <meta name="description" content="Salvapantallas ambiental minimalista y reloj digital de salón impulsado por túnel geométrico infinito en Rust WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_reloj/">
+  <meta name="theme-color" content="#030408">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>">
+  <link rel="stylesheet" href="reloj.css">
+</head>
+<body class="tv-friendly">
+  <!-- Canvas del Túnel Infinito -->
+  <canvas id="tunnelCanvas"></canvas>
+
+  <!-- Reloj Digital Central (Ambient Display para TV y salón) -->
+  <div class="ambient-clock" id="ambientClock">
+    <div class="clock-time" id="clockTime">00:00:00</div>
+    <div class="clock-date" id="clockDate">Cargando fecha...</div>
+    <div class="clock-sub" id="clockSub">ESPACIO AMBIENTAL · TV SALVAPANTALLAS</div>
+  </div>
+
+  <!-- Barra Superior Flotante (ocultable automáticamente) -->
+  <header class="lab-topbar" id="labTopbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la portada">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #06 · AMBIENT TV</span>
+        <h1>Reloj Cósmico</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
+        <span class="stat-pill">WASM: <strong>528 B</strong></span>
+      </div>
+      <button id="toggleClockBtn" class="action-pill-btn" title="Mostrar/Ocultar Reloj">
+        <span id="clockBtnText">⏰ Ocultar Reloj</span>
+      </button>
+      <button id="cleanModeBtn" class="icon-btn" title="Modo Pantalla Limpia (Oculta todo)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+      <button id="toggleHudBtn" class="icon-btn" title="Mostrar/Ocultar Controles">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Botón discreto para salir del modo inmersivo limpio -->
+  <button id="restoreUiBtn" class="restore-ui-corner" title="Restaurar Controles">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+
+  <!-- Dock Inferior Flotante de Opciones -->
+  <aside class="hud-dock" id="hudDock">
+    <div class="hud-controls">
+      <!-- Geometría del Túnel -->
+      <div class="control-group">
+        <label>Forma del Túnel</label>
+        <div class="button-toggle-group">
+          <button class="shape-btn active" data-sides="0">Círculo</button>
+          <button class="shape-btn" data-sides="6">Hexágono</button>
+          <button class="shape-btn" data-sides="4">Cuadrado</button>
+          <button class="shape-btn" data-sides="8">Octógono</button>
+        </div>
+      </div>
+
+      <!-- Paleta Ambiental -->
+      <div class="control-group">
+        <label>Atmósfera</label>
+        <div class="button-toggle-group">
+          <button class="palette-btn active" data-pal="neon">Cyber</button>
+          <button class="palette-btn" data-pal="aurora">Aurora</button>
+          <button class="palette-btn" data-pal="gold">Ámbar</button>
+          <button class="palette-btn" data-pal="monochrome">Minimal</button>
+        </div>
+      </div>
+
+      <!-- Velocidad del Viaje -->
+      <div class="control-group">
+        <label for="speedSlider">
+          <span>Velocidad</span>
+          <strong id="speedLabel">Normal</strong>
+        </label>
+        <input type="range" id="speedSlider" min="1" max="5" step="1" value="2">
+      </div>
+
+      <!-- Curvatura espacial -->
+      <div class="control-group">
+        <label for="curveSlider">
+          <span>Ondulación</span>
+          <strong id="curveLabel">Suave</strong>
+        </label>
+        <input type="range" id="curveSlider" min="0" max="3" step="1" value="1">
+      </div>
+    </div>
+  </aside>
+
+  <script src="reloj.js"></script>
+</body>
+</html>

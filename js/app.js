@@ -289,6 +289,49 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 7. MINIATURA VIVA: RELOJ CÓSMICO (P06) ---
+  function initThumbClock() {
+    const canvas = document.getElementById('thumbClock');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#020306';
+      ctx.fillRect(0, 0, w, h);
+
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+      const t = now * 0.001;
+      const rings = 12;
+      const colors = ['#00f5d4', '#3b82f6', '#9d4edd', '#f72585'];
+
+      for (let i = 0; i < rings; i++) {
+        const rawZ = (i / rings + t * 0.4) % 1.0;
+        const z = rawZ * rawZ;
+        const r = z * (w * 0.48) + 2;
+        const alpha = z * 0.85 + 0.1;
+
+        ctx.strokeStyle = colors[i % colors.length];
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = Math.max(1, z * 2.2);
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -296,4 +339,5 @@
   initThumbWaves();
   initThumbDevice();
   initThumbFractals();
+  initThumbClock();
 })();
