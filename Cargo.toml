@@ -6,6 +6,7 @@ members = [
   "pr_dispositivo/engine",
   "pr_fractales/engine",
   "pr_reloj/engine",
+  "pr_noticias/engine",
 ]
 resolver = "2"
 

@@ -332,6 +332,58 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 8. MINIATURA VIVA: NOTICIAS (P07) ---
+  function initThumbNews() {
+    const canvas = document.getElementById('thumbNews');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#06080e';
+      ctx.fillRect(0, 0, w, h);
+
+      const t = now * 0.0015;
+      const cards = 4;
+      const cw = (w - 30) / cards;
+
+      for (let i = 0; i < cards; i++) {
+        const offset = Math.sin(t + i * 1.2) * 12;
+        const x = 15 + i * cw;
+        const y = 30 + offset;
+        const cardH = h - 60;
+
+        ctx.fillStyle = 'rgba(13, 17, 26, 0.85)';
+        ctx.strokeStyle = 'rgba(0, 245, 212, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, cw - 6, cardH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Mini foto simulada
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(0, 245, 212, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+        ctx.fillRect(x + 4, y + 4, cw - 14, cardH * 0.42);
+
+        // Líneas de texto simuladas
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fillRect(x + 4, y + cardH * 0.55, cw - 18, 3);
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.35)';
+        ctx.fillRect(x + 4, y + cardH * 0.7, cw - 24, 3);
+        ctx.fillRect(x + 4, y + cardH * 0.82, cw - 30, 3);
+      }
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -340,4 +392,5 @@
   initThumbDevice();
   initThumbFractals();
   initThumbClock();
+  initThumbNews();
 })();

@@ -51,11 +51,18 @@ javiergalilea/
 │   ├── engine.wasm       # Binario compilado (Mandelbrot, Julia, Ship, Tricorn)
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_reloj/             # [Subproyecto 06: Reloj Cósmico & Túnel TV]
-    ├── index.html        # Experiencia a pantalla completa / modo salón
-    ├── reloj.css         # Tipografía digital y modo inmersivo limpio
-    ├── reloj.js          # Reloj en vivo y renderizado de anillos
-    ├── engine.wasm       # Motor analítico ultra-ligero (528 bytes)
+├── pr_reloj/             # [Subproyecto 06: Reloj Cósmico & Túnel TV]
+│   ├── index.html        # Experiencia a pantalla completa / modo salón
+│   ├── reloj.css         # Tipografía digital y modo inmersivo limpio
+│   ├── reloj.js          # Reloj en vivo y renderizado de anillos
+│   ├── engine.wasm       # Motor analítico ultra-ligero (528 bytes)
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_noticias/          # [Subproyecto 07: Kiosco Dinámico de Noticias]
+    ├── index.html        # Kiosco dinámico de prensa
+    ├── noticias.css      # Tarjetas con imagen y resumen
+    ├── noticias.js       # Consumo RSS (El Mundo, El País, El Confidencial, ABC)
+    ├── engine.wasm       # Barajado aleatorio Fisher-Yates (339 bytes)
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiosco Dinámico de Prensa — Javier Galilea</title>
+  <meta name="description" content="Kiosco de noticias en tiempo real con selección aleatoria de titulares de El Mundo, El País, El Confidencial y ABC.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_noticias/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <link rel="stylesheet" href="noticias.css">
+</head>
+<body>
+  <!-- Fondo dinámico sutil -->
+  <div class="ambient-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <!-- Barra Superior -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la portada">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #07 · PRENSA EN VIVO</span>
+        <h1>Kiosco Digital</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="newsCounter">0</strong> Noticias</span>
+        <span class="stat-pill">Barajado: <strong>Rust WASM</strong></span>
+      </div>
+      <button id="shuffleBtn" class="action-pill-btn" title="Barajar titulares aleatoriamente con Rust WASM">
+        <span>🎲 Barajar Noticias</span>
+      </button>
+      <button id="refreshBtn" class="icon-btn" title="Recargar feeds en vivo">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+        </svg>
+      </button>
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Filtros por medio de prensa -->
+  <nav class="news-filters-bar">
+    <button class="filter-pill active" data-source="all">Todos los periódicos</button>
+    <button class="filter-pill" data-source="elmundo">El Mundo</button>
+    <button class="filter-pill" data-source="elpais">El País</button>
+    <button class="filter-pill" data-source="elconfidencial">El Confidencial</button>
+    <button class="filter-pill" data-source="abc">ABC</button>
+  </nav>
+
+  <!-- Estado de carga -->
+  <div id="loadingBox" class="loading-state">
+    <div class="spinner"></div>
+    <p>Conectando con las portadas en vivo de El Mundo, El País, El Confidencial y ABC...</p>
+  </div>
+
+  <!-- Rejilla de Noticias Dinámicas -->
+  <main class="news-container">
+    <div class="news-grid" id="newsGrid"></div>
+  </main>
+
+  <script src="noticias.js"></script>
+</body>
+</html>

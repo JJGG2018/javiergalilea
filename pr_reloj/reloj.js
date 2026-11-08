@@ -267,3 +267,4 @@
   initWasm();
   requestAnimationFrame(loop);
 })();
+
