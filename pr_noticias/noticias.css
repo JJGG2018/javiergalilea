@@ -184,7 +184,7 @@ html, body {
 }
 
 /* Barra de Filtros */
-.news-filters-bar {
+.filters-container {
   position: relative;
   z-index: 10;
   max-width: 95vw;
@@ -192,17 +192,67 @@ html, body {
   margin: 1.5rem auto 0;
   padding: 0 1.5rem;
   display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.scope-filters-bar {
+  display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.6rem;
 }
 
-.filter-pill {
-  background: rgba(13, 17, 26, 0.7);
+.scope-pill {
+  background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-secondary);
-  padding: 0.45rem 1rem;
+  padding: 0.5rem 1.15rem;
   border-radius: 100px;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.scope-pill:hover {
+  color: var(--text-primary);
+  border-color: rgba(0, 245, 212, 0.3);
+  transform: translateY(-1px);
+}
+
+.scope-pill.active {
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 16px rgba(0, 245, 212, 0.2);
+}
+
+.sources-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.2rem;
+}
+
+.filter-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--glass-border);
+  margin: 0 0.3rem;
+}
+
+.filter-pill {
+  background: rgba(13, 17, 26, 0.65);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.9rem;
+  border-radius: 100px;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -210,13 +260,17 @@ html, body {
 
 .filter-pill:hover {
   color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .filter-pill.active {
   background: rgba(0, 245, 212, 0.15);
   border-color: var(--accent-cyan);
   color: var(--accent-cyan);
+}
+
+.filter-pill.dimmed {
+  opacity: 0.35;
 }
 
 /* Estado de carga */
@@ -335,6 +389,30 @@ html, body {
   background: rgba(153, 27, 27, 0.85);
   border: 1px solid rgba(239, 68, 68, 0.5);
   color: #fef2f2;
+}
+
+.source-bbc {
+  background: rgba(185, 28, 28, 0.88);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  color: #ffffff;
+}
+
+.source-guardian {
+  background: rgba(5, 41, 98, 0.9);
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  color: #eff6ff;
+}
+
+.source-nytimes {
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+  color: #ffffff;
+}
+
+.source-time {
+  background: rgba(220, 38, 38, 0.88);
+  border: 1px solid rgba(252, 165, 165, 0.6);
+  color: #ffffff;
 }
 
 .news-content {

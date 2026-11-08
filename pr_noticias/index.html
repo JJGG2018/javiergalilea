@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kiosco Dinámico de Prensa — Javier Galilea</title>
-  <meta name="description" content="Kiosco de noticias en tiempo real con selección aleatoria de titulares de El Mundo, El País, El Confidencial y ABC.">
+  <meta name="description" content="Kiosco de noticias en tiempo real con selección aleatoria de titulares de prensa nacional (El Mundo, El País, El Confidencial, ABC) e internacional en inglés (BBC News, The Guardian, The New York Times, TIME).">
   <link rel="canonical" href="https://javiergalilea.es/pr_noticias/">
   <meta name="theme-color" content="#06080e">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
@@ -54,19 +54,39 @@
     </div>
   </header>
 
-  <!-- Filtros por medio de prensa -->
-  <nav class="news-filters-bar">
-    <button class="filter-pill active" data-source="all">Todos los periódicos</button>
-    <button class="filter-pill" data-source="elmundo">El Mundo</button>
-    <button class="filter-pill" data-source="elpais">El País</button>
-    <button class="filter-pill" data-source="elconfidencial">El Confidencial</button>
-    <button class="filter-pill" data-source="abc">ABC</button>
-  </nav>
+  <!-- Filtros de Prensa: Ámbito y Cabeceras individuales -->
+  <section class="filters-container">
+    <div class="scope-filters-bar">
+      <button class="scope-pill active" data-scope="all">
+        <span>✨ Todos</span>
+      </button>
+      <button class="scope-pill" data-scope="nacional">
+        <span>🇪🇸 Nacional</span>
+      </button>
+      <button class="scope-pill" data-scope="internacional">
+        <span>🌍 Internacional (English)</span>
+      </button>
+    </div>
+
+    <div class="sources-filters-bar" id="sourcesFilterBar">
+      <button class="filter-pill active" data-source="all">Todas las cabeceras</button>
+      <span class="filter-divider"></span>
+      <button class="filter-pill" data-source="elmundo" data-scope="nacional">El Mundo</button>
+      <button class="filter-pill" data-source="elpais" data-scope="nacional">El País</button>
+      <button class="filter-pill" data-source="elconfidencial" data-scope="nacional">El Confidencial</button>
+      <button class="filter-pill" data-source="abc" data-scope="nacional">ABC</button>
+      <span class="filter-divider"></span>
+      <button class="filter-pill" data-source="bbc" data-scope="internacional">BBC News</button>
+      <button class="filter-pill" data-source="theguardian" data-scope="internacional">The Guardian</button>
+      <button class="filter-pill" data-source="nytimes" data-scope="internacional">The New York Times</button>
+      <button class="filter-pill" data-source="time" data-scope="internacional">TIME</button>
+    </div>
+  </section>
 
   <!-- Estado de carga -->
   <div id="loadingBox" class="loading-state">
     <div class="spinner"></div>
-    <p>Conectando con las portadas en vivo de El Mundo, El País, El Confidencial y ABC...</p>
+    <p>Conectando con las portadas en vivo de prensa nacional e internacional...</p>
   </div>
 
   <!-- Rejilla de Noticias Dinámicas -->
