@@ -307,6 +307,24 @@
       hudDock.classList.toggle('collapsed');
     });
 
+    const cleanModeBtn = document.getElementById('cleanModeBtn');
+    const restoreUiBtn = document.getElementById('restoreUiBtn');
+    if (cleanModeBtn) {
+      cleanModeBtn.addEventListener('click', () => {
+        document.body.classList.add('clean-mode');
+      });
+    }
+    if (restoreUiBtn) {
+      restoreUiBtn.addEventListener('click', () => {
+        document.body.classList.remove('clean-mode');
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('clean-mode')) {
+        document.body.classList.remove('clean-mode');
+      }
+    });
+
     if (fullscreenBtn) {
       fullscreenBtn.addEventListener('click', () => {
         if (!document.fullscreenElement) {

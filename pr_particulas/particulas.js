@@ -154,6 +154,27 @@
       });
     }
 
+    // Modo inmersivo (solo botón volver)
+    const cleanModeBtn = document.getElementById('cleanModeBtn');
+    const restoreUiBtn = document.getElementById('restoreUiBtn');
+    if (cleanModeBtn) {
+      cleanModeBtn.addEventListener('click', () => {
+        document.body.classList.add('clean-mode');
+        const benchModal = document.getElementById('benchModal');
+        if (benchModal) benchModal.classList.add('hidden');
+      });
+    }
+    if (restoreUiBtn) {
+      restoreUiBtn.addEventListener('click', () => {
+        document.body.classList.remove('clean-mode');
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('clean-mode')) {
+        document.body.classList.remove('clean-mode');
+      }
+    });
+
     // Pantalla completa
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     if (fullscreenBtn) {

@@ -228,10 +228,52 @@ html, body {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
 }
 
-.hud-dock.collapsed {
+.hud-dock.collapsed,
+body.clean-mode .hud-dock {
   transform: translate(-50%, calc(100% + 2rem));
   opacity: 0;
   pointer-events: none;
+}
+
+/* Modo Inmersivo: Oculta todos los controles salvo el botón de vuelta atrás */
+body.clean-mode .lab-title-group,
+body.clean-mode .topbar-right,
+body.clean-mode .canvas-hint {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease;
+}
+
+.restore-ui-corner {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 25;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(12, 17, 28, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+body.clean-mode .restore-ui-corner {
+  opacity: 0.25;
+  pointer-events: auto;
+}
+
+body.clean-mode .restore-ui-corner:hover {
+  opacity: 0.95;
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  background: var(--glass-bg);
 }
 
 .hud-controls {

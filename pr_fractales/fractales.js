@@ -441,6 +441,25 @@
       hudDock.classList.toggle('collapsed');
     });
 
+    // Modo inmersivo (ocultar todo salvo volver atrás)
+    const cleanModeBtn = document.getElementById('cleanModeBtn');
+    const restoreUiBtn = document.getElementById('restoreUiBtn');
+    if (cleanModeBtn) {
+      cleanModeBtn.addEventListener('click', () => {
+        document.body.classList.add('clean-mode');
+      });
+    }
+    if (restoreUiBtn) {
+      restoreUiBtn.addEventListener('click', () => {
+        document.body.classList.remove('clean-mode');
+      });
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('clean-mode')) {
+        document.body.classList.remove('clean-mode');
+      }
+    });
+
     // Pantalla completa
     if (fullscreenBtn) {
       fullscreenBtn.addEventListener('click', () => {

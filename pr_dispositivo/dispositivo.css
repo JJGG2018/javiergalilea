@@ -180,6 +180,53 @@ html, body {
   color: var(--accent-cyan);
 }
 
+/* Modo Inmersivo: Oculta todos los controles salvo el botón de vuelta atrás */
+body.clean-mode .lab-topbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+
+body.clean-mode .lab-title-group,
+body.clean-mode .topbar-right {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease;
+}
+
+.restore-ui-corner {
+  position: fixed;
+  top: 0.95rem;
+  right: 1.5rem;
+  z-index: 60;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(12, 17, 28, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s ease;
+}
+
+body.clean-mode .restore-ui-corner {
+  opacity: 0.25;
+  pointer-events: auto;
+}
+
+body.clean-mode .restore-ui-corner:hover {
+  opacity: 0.95;
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  background: var(--glass-bg);
+}
+
 /* Dashboard Container */
 .dashboard-container {
   position: relative;
