@@ -19,7 +19,7 @@
   let currentMode = 'harmonic';
   let currentPalette = 'spectral';
   let harmonicCount = 4;
-  let baseFreq = 220;
+  let baseFreq = 440;
   let waveType = 'sine';
 
   let mouse = {
@@ -96,7 +96,7 @@
 
       osc.type = waveType;
       const targetFreq = baseFreq * i * mouse.freqMod;
-      osc.frequency.setValueAtTime(Math.min(targetFreq, 18000), now);
+      osc.frequency.setValueAtTime(Math.min(targetFreq, 20000), now);
 
       const armGain = (1 / (i * 1.4)) * 0.15;
       gain.gain.setValueAtTime(armGain, now);
@@ -119,7 +119,7 @@
     }
 
     for (const item of oscillators) {
-      const targetFreq = Math.min(actualFreq * item.harmonic, 16000);
+      const targetFreq = Math.min(actualFreq * item.harmonic, 20000);
       item.osc.frequency.setTargetAtTime(targetFreq, now, 0.05);
     }
   }
@@ -297,7 +297,7 @@
 
     baseFreqSlider.addEventListener('input', (e) => {
       baseFreq = parseInt(e.target.value, 10);
-      baseFreqLabel.textContent = `${baseFreq} Hz`;
+      baseFreqLabel.textContent = baseFreq >= 1000 ? `${(baseFreq / 1000).toFixed(1)} kHz` : `${baseFreq} Hz`;
       updateAudioFrequencies();
     });
 
