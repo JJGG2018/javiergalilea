@@ -309,10 +309,10 @@ main {
   font-size: 0.98rem;
 }
 
-/* Projects Grid: 3 columnas equilibradas */
+/* Projects Grid: Cuadrícula responsive */
 .projects-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 1.6rem;
 }
 

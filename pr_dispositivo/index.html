@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telemetría & Hardware del Dispositivo — Javier Galilea</title>
+  <meta name="description" content="Auditoría interactiva de hardware, pantalla, red, sensores y rendimiento en tu dispositivo por Javier Galilea.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_dispositivo/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💻</text></svg>">
+  <link rel="stylesheet" href="dispositivo.css">
+</head>
+<body>
+  <!-- Fondo ambiental interactivo -->
+  <div class="ambient-bg">
+    <canvas id="telemetryCanvas"></canvas>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <!-- Barra superior estándar -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la portada">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #04 · HARDWARE LAB</span>
+        <h1>Diagnóstico del Dispositivo</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <button id="runBenchBtn" class="action-pill-btn" title="Ejecutar prueba de estrés mononúcleo en Rust WASM">
+        <span>⚡ Benchmark CPU (Rust WASM)</span>
+      </button>
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal en Bento Grid -->
+  <main class="dashboard-container">
+    <!-- Puntuación global analizada por Rust WASM -->
+    <section class="tier-card glass-panel">
+      <div class="tier-left">
+        <span class="tier-label">Perfil de Hardware Calculado por Rust (WASM)</span>
+        <h2 id="tierTitle">Analizando sistema...</h2>
+        <p id="tierSummary">Examinando especificaciones de tu procesador, memoria, resolución gráfica y entorno de ejecución.</p>
+      </div>
+      <div class="tier-score-box">
+        <span class="score-num" id="tierScore">--</span>
+        <span class="score-sub">Puntos de hardware</span>
+      </div>
+    </section>
+
+    <!-- Bento Grid de Módulos -->
+    <div class="bento-grid">
+      <!-- 1. Procesador y Memoria -->
+      <div class="bento-card glass-panel">
+        <div class="card-head">
+          <span class="icon">🧠</span>
+          <h3>Procesador & Memoria</h3>
+        </div>
+        <ul class="data-list">
+          <li>
+            <span>Núcleos lógicos (hilos):</span>
+            <strong id="cpuCores">--</strong>
+          </li>
+          <li>
+            <span>Memoria RAM aproximada:</span>
+            <strong id="ramGb">--</strong>
+          </li>
+          <li>
+            <span>Benchmark Rust WASM:</span>
+            <strong id="benchResult">No ejecutado</strong>
+          </li>
+          <li>
+            <span>Arquitectura / Plataforma:</span>
+            <strong id="platformText">--</strong>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 2. Gráficos y Pantalla -->
+      <div class="bento-card glass-panel">
+        <div class="card-head">
+          <span class="icon">🖥️</span>
+          <h3>Pantalla & GPU</h3>
+        </div>
+        <ul class="data-list">
+          <li>
+            <span>Resolución de pantalla:</span>
+            <strong id="screenRes">--</strong>
+          </li>
+          <li>
+            <span>Resolución del viewport:</span>
+            <strong id="viewportRes">--</strong>
+          </li>
+          <li>
+            <span>Escala de píxeles (DPR):</span>
+            <strong id="pixelRatio">--</strong>
+          </li>
+          <li>
+            <span>Renderizador GPU (WebGL):</span>
+            <strong id="gpuRenderer">--</strong>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 3. Red y Conectividad -->
+      <div class="bento-card glass-panel">
+        <div class="card-head">
+          <span class="icon">🌐</span>
+          <h3>Red & Conexión</h3>
+        </div>
+        <ul class="data-list">
+          <li>
+            <span>Estado de conexión:</span>
+            <strong id="onlineStatus">--</strong>
+          </li>
+          <li>
+            <span>Tipo de enlace efectivo:</span>
+            <strong id="netType">--</strong>
+          </li>
+          <li>
+            <span>Velocidad de bajada estimada:</span>
+            <strong id="netDownlink">--</strong>
+          </li>
+          <li>
+            <span>Latencia de red (RTT):</span>
+            <strong id="netRtt">--</strong>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 4. Sistema, Navegador e Idioma -->
+      <div class="bento-card glass-panel">
+        <div class="card-head">
+          <span class="icon">⚙️</span>
+          <h3>Sistema & Entorno</h3>
+        </div>
+        <ul class="data-list">
+          <li>
+            <span>Idioma preferido:</span>
+            <strong id="userLang">--</strong>
+          </li>
+          <li>
+            <span>Zona horaria local:</span>
+            <strong id="userTimezone">--</strong>
+          </li>
+          <li>
+            <span>Tema del sistema (Dark/Light):</span>
+            <strong id="colorScheme">--</strong>
+          </li>
+          <li>
+            <span>Entrada táctil detectada:</span>
+            <strong id="touchSupport">--</strong>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 5. Batería y Energía (Si el navegador lo soporta) -->
+      <div class="bento-card glass-panel">
+        <div class="card-head">
+          <span class="icon">🔋</span>
+          <h3>Batería & Energía</h3>
+        </div>
+        <ul class="data-list">
+          <li>
+            <span>Nivel de carga:</span>
+            <strong id="batteryLevel">--</strong>
+          </li>
+          <li>
+            <span>Estado de carga:</span>
+            <strong id="batteryCharging">--</strong>
+          </li>
+          <li>
+            <span>Tiempo hasta descarga/carga:</span>
+            <strong id="batteryTime">--</strong>
+          </li>
+          <li>
+            <span>Modo ahorro de datos:</span>
+            <strong id="saveDataMode">--</strong>
+          </li>
+        </ul>
+      </div>
+
+      <!-- 6. Sensores y Permisos (Interactivos bajo demanda) -->
+      <div class="bento-card glass-panel access-card">
+        <div class="card-head">
+          <span class="icon">📍</span>
+          <h3>Permisos & Sensores</h3>
+        </div>
+        <p class="access-desc">Algunas APIs requieren que autorices el acceso explícitamente en tu navegador.</p>
+        
+        <div class="permissions-actions">
+          <button id="btnGeo" class="btn-perm">
+            <span>📍 Probar Geolocalización</span>
+          </button>
+          <div id="geoResult" class="perm-readout">Permiso no solicitado</div>
+
+          <button id="btnOrientation" class="btn-perm">
+            <span>🧭 Leer Giroscopio / Orientación</span>
+          </button>
+          <div id="orientResult" class="perm-readout">Mueve el dispositivo</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="dispositivo.js"></script>
+</body>
+</html>

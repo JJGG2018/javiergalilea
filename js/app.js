@@ -212,9 +212,42 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 5. MINIATURA VIVA: DISPOSITIVO (P04) ---
+  function initThumbDevice() {
+    const canvas = document.getElementById('thumbDevice');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#05070c';
+      ctx.fillRect(0, 0, w, h);
+
+      const t = now * 0.002;
+      const bars = 16;
+      const bw = (w - 40) / bars;
+
+      for (let i = 0; i < bars; i++) {
+        const val = (Math.sin(i * 0.45 + t) + 1) * 0.5;
+        const bh = val * (h * 0.55);
+        ctx.fillStyle = i % 2 === 0 ? 'rgba(0, 245, 212, 0.7)' : 'rgba(59, 130, 246, 0.7)';
+        ctx.fillRect(20 + i * bw, h - 25 - bh, bw - 4, bh);
+      }
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
   initThumbAutomata();
   initThumbWaves();
+  initThumbDevice();
 })();

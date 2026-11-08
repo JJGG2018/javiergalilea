@@ -30,11 +30,18 @@ javiergalilea/
 │   ├── engine.wasm       # Binario compilado
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_ondas/             # [Subproyecto 03: Ondas & Audio]
-    ├── index.html        # Experiencia a pantalla completa
-    ├── ondas.css         # Interfaz y dock de controles
-    ├── ondas.js          # Síntesis acústica Web Audio API y figuras
-    ├── engine.wasm       # Binario compilado
+├── pr_ondas/             # [Subproyecto 03: Ondas & Audio]
+│   ├── index.html        # Experiencia a pantalla completa
+│   ├── ondas.css         # Interfaz y dock de controles
+│   ├── ondas.js          # Síntesis acústica Web Audio API y figuras
+│   ├── engine.wasm       # Binario compilado
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_dispositivo/       # [Subproyecto 04: Telemetría & Hardware]
+    ├── index.html        # Panel de auditoría de hardware y sensores
+    ├── dispositivo.css   # Estilos Bento Grid y HUD
+    ├── dispositivo.js    # Lectura de APIs nativas y permisos
+    ├── engine.wasm       # Motor de puntuación y benchmark en Rust
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 
