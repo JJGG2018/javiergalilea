@@ -231,7 +231,8 @@ body.clean-mode .restore-ui-corner:hover {
 .dashboard-container {
   position: relative;
   z-index: 10;
-  max-width: 1120px;
+  max-width: 95vw;
+  width: 100%;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 5rem;
 }
@@ -318,7 +319,7 @@ body.clean-mode .restore-ui-corner:hover {
 /* Bento Grid */
 .bento-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
   gap: 1.4rem;
 }
 
