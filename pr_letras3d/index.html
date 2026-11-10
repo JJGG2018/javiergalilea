@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tipografía 3D Interactiva — Javier Galilea</title>
+  <meta name="description" content="Escultura tipográfica 3D interactiva con las letras de Javier Galilea. Físicas elásticas, extrusión volumétrica y proyección en perspectiva con Rust y WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_letras3d/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧊</text></svg>">
+  <link rel="stylesheet" href="letras3d.css">
+</head>
+<body>
+  <!-- Lienzo 3D Interactivo a Pantalla Completa -->
+  <canvas id="lettersCanvas"></canvas>
+
+  <!-- Barra Superior Flotante -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la página principal">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #08 · TIPOGRAFÍA 3D</span>
+        <h1>Letras 3D — Javier Galilea</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="voxelCount">0</strong> nodos 3D</span>
+        <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
+        <span class="stat-pill"><strong id="wasmTime">0.14</strong> ms</span>
+      </div>
+      <button id="explodeBtn" class="action-pill-btn" title="Lanzar onda expansiva 3D sobre las letras">
+        <span>💥 Impulso 3D</span>
+      </button>
+      <button id="resetCamBtn" class="action-pill-btn secondary-pill" title="Centrar cámara 3D">
+        <span>⟲ Centrar Vista</span>
+      </button>
+      <button id="cleanModeBtn" class="icon-btn" title="Modo inmersivo (ocultar todos los controles salvo volver)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+      <button id="toggleHudBtn" class="icon-btn" title="Mostrar/Ocultar controles">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <button id="restoreUiBtn" class="restore-ui-corner" title="Restaurar controles (ESC)" aria-label="Restaurar controles">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+    </svg>
+  </button>
+
+  <!-- Indicador de Interacción -->
+  <div class="canvas-hint" id="canvasHint">
+    🧊 Arrastra para rotar en 3D · Pasa el cursor para esculpir «JAVIER GALILEA» · Rueda para zoom · Doble clic para explosión 3D
+  </div>
+
+  <!-- Panel de Control Flotante (Dock Inferior) -->
+  <aside class="hud-dock" id="hudDock">
+    <div class="hud-controls">
+      <!-- Composición Tipográfica -->
+      <div class="control-group">
+        <label>Escultura 3D</label>
+        <div class="button-toggle-group">
+          <button class="layout-btn active" data-layout="stacked" title="JAVIER GALILEA en doble nivel volumétrico">Javier Galilea</button>
+          <button class="layout-btn" data-layout="monogram" title="Monograma JG monumental con anillo orbital">JG + Órbita</button>
+          <button class="layout-btn" data-layout="cylinder" title="Anillo cilíndrico 360° con las letras de Javier Galilea">Anillo 360°</button>
+        </div>
+      </div>
+
+      <!-- Modo de Renderizado 3D -->
+      <div class="control-group">
+        <label>Geometría Visual</label>
+        <div class="button-toggle-group">
+          <button class="render-btn active" data-render="cubes" title="Cubos volumétricos 3D con caras iluminadas">Cubos 3D</button>
+          <button class="render-btn" data-render="plexus" title="Nodos esféricos y filamentos de constelación 3D">Red Neural</button>
+          <button class="render-btn" data-render="hologram" title="Capas holográficas y neón espacial">Holograma</button>
+        </div>
+      </div>
+
+      <!-- Dinámica en Vivo -->
+      <div class="control-group">
+        <label>Física & Movimiento</label>
+        <div class="button-toggle-group">
+          <button class="anim-btn active" data-anim="0" title="Onda armónica propagándose por las letras">Onda</button>
+          <button class="anim-btn" data-anim="1" title="Torsión helicoidal en el eje X">Torsión</button>
+          <button class="anim-btn" data-anim="2" title="Levitación independiente por cada letra">Levitación</button>
+          <button class="anim-btn" data-anim="3" title="Balanceo orbital en profundidad">Vórtice</button>
+        </div>
+      </div>
+
+      <!-- Paleta Cromática -->
+      <div class="control-group">
+        <label>Paleta Cromática</label>
+        <div class="button-toggle-group">
+          <button class="palette-btn active" data-palette="cyber">Cyber</button>
+          <button class="palette-btn" data-palette="solar">Solar</button>
+          <button class="palette-btn" data-palette="aurora">Aurora</button>
+          <button class="palette-btn" data-palette="gold">Ámbar</button>
+        </div>
+      </div>
+
+      <!-- Extrusión / Profundidad Z -->
+      <div class="control-group depth-group">
+        <label for="depthSlider">
+          <span>Extrusión Z</span>
+          <strong id="depthLabel">1.2×</strong>
+        </label>
+        <input type="range" id="depthSlider" min="0.4" max="2.4" step="0.2" value="1.2">
+      </div>
+    </div>
+  </aside>
+
+  <script src="letras3d.js"></script>
+</body>
+</html>

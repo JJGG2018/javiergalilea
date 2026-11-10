@@ -384,6 +384,90 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 9. MINIATURA VIVA: TIPOGRAFÍA 3D (P08) ---
+  function initThumbLetters3d() {
+    const canvas = document.getElementById('thumbLetters3d');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Construir puntos 3D del texto "JG" + "JAVIER" en offscreen canvas
+    const off = document.createElement('canvas');
+    off.width = 120;
+    off.height = 52;
+    const octx = off.getContext('2d');
+    octx.fillStyle = '#000';
+    octx.fillRect(0, 0, 120, 52);
+    octx.fillStyle = '#fff';
+    octx.font = '900 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    octx.textAlign = 'center';
+    octx.textBaseline = 'middle';
+    octx.fillText('JAVIER', 60, 16);
+    octx.font = '900 19px -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+    octx.fillText('GALILEA', 60, 38);
+
+    const data = octx.getImageData(0, 0, 120, 52).data;
+    const voxels = [];
+    const zLayers = [-8, 0, 8];
+    const palette = ['#00f5d4', '#3b82f6', '#9d4edd', '#f72585'];
+
+    for (let y = 0; y < 52; y += 2) {
+      for (let x = 0; x < 120; x += 2) {
+        if (data[(y * 120 + x) * 4] > 128) {
+          for (let l = 0; l < zLayers.length; l++) {
+            if (l === 1 && (x + y) % 4 !== 0) continue;
+            voxels.push({
+              x: (x - 60) * 1.95,
+              y: (y - 26) * 1.95,
+              z: zLayers[l],
+              col: palette[Math.floor((x / 120) * palette.length) % palette.length],
+              front: l === zLayers.length - 1
+            });
+          }
+        }
+      }
+    }
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#05070c';
+      ctx.fillRect(0, 0, w, h);
+
+      const t = now * 0.0016;
+      const rotY = Math.sin(t) * 0.52;
+      const rotX = Math.cos(t * 0.7) * 0.22;
+      const sinY = Math.sin(rotY), cosY = Math.cos(rotY);
+      const sinX = Math.sin(rotX), cosX = Math.cos(rotX);
+      const cx = w * 0.5;
+      const cy = h * 0.5;
+
+      for (let i = 0; i < voxels.length; i++) {
+        const v = voxels[i];
+        const waveZ = v.z + Math.sin(t * 2.2 + v.x * 0.04) * 7;
+        const rx = v.x * cosY + waveZ * sinY;
+        const rz1 = -v.x * sinY + waveZ * cosY;
+        const ry = v.y * cosX - rz1 * sinX;
+        const rz = v.y * sinX + rz1 * cosX;
+
+        const scale = 240 / (240 + rz);
+        const sx = cx + rx * scale;
+        const sy = cy + ry * scale;
+        const sz = Math.max(1.5, 2.7 * scale);
+
+        ctx.fillStyle = v.front ? v.col : 'rgba(59, 130, 246, 0.38)';
+        ctx.fillRect(sx - sz * 0.5, sy - sz * 0.5, sz, sz);
+      }
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -393,4 +477,5 @@
   initThumbFractals();
   initThumbClock();
   initThumbNews();
+  initThumbLetters3d();
 })();

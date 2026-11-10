@@ -58,11 +58,18 @@ javiergalilea/
 │   ├── engine.wasm       # Motor analítico ultra-ligero (528 bytes)
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_noticias/          # [Subproyecto 07: Kiosco Dinámico de Noticias]
-    ├── index.html        # Kiosco dinámico de prensa
-    ├── noticias.css      # Tarjetas con imagen y resumen
-    ├── noticias.js       # Consumo RSS (El Mundo, El País, El Confidencial, ABC)
-    ├── engine.wasm       # Barajado aleatorio Fisher-Yates (339 bytes)
+├── pr_noticias/          # [Subproyecto 07: Kiosco Dinámico de Noticias]
+│   ├── index.html        # Kiosco dinámico de prensa
+│   ├── noticias.css      # Tarjetas con imagen y resumen
+│   ├── noticias.js       # Consumo RSS (El Mundo, El País, El Confidencial, ABC)
+│   ├── engine.wasm       # Barajado aleatorio Fisher-Yates (339 bytes)
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_letras3d/          # [Subproyecto 08: Escultura Tipográfica 3D]
+    ├── index.html        # Experiencia interactiva 3D a pantalla completa
+    ├── letras3d.css      # Interfaz y dock de controles 3D
+    ├── letras3d.js       # Rasterizado tipográfico 3D, cámara orbital y sombreado
+    ├── engine.wasm       # Motor de físicas elásticas 3D y proyección en Rust WASM
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 
