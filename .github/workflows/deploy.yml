@@ -1,0 +1,82 @@
+name: "🚀 Despliegue & Auditoría — javiergalilea.es"
+
+# Muestra el mensaje real del commit como título de cada ejecución en la pestaña Actions
+run-name: "🚀 ${{ github.event.head_commit.message || 'Despliegue manual de javiergalilea.es' }} · @${{ github.actor }}"
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-verify:
+    name: "🔍 Verificar 8 Proyectos, Binarios WASM y Empaquetar"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "📥 Descargar código fuente del repositorio"
+        uses: actions/checkout@v4
+
+      - name: "🦀 Auditar subproyectos y binarios WebAssembly (.wasm)"
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message || 'Despliegue manual' }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "### 📊 Resumen de Despliegue — javiergalilea.es" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** \`${GITHUB_SHA::7}\` — ${COMMIT_MSG}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Autor:** @${ACTOR}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dominio:** [https://javiergalilea.es](https://javiergalilea.es)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| # | Subproyecto | Carpeta | Binario WASM | Estado | URL Pública |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|-------------|---------|--------------|--------|-------------|" >> $GITHUB_STEP_SUMMARY
+
+          check_project() {
+            local num="$1"
+            local name="$2"
+            local dir="$3"
+            if [ ! -f "$dir/index.html" ] || [ ! -f "$dir/engine.wasm" ]; then
+              echo "❌ Error: Faltan archivos en $dir"
+              exit 1
+            fi
+            local size=$(wc -c < "$dir/engine.wasm" | tr -d ' ')
+            echo "✅ [$num] $name ($dir) -> engine.wasm (${size} bytes)"
+            echo "| $num | **$name** | \`$dir/\` | \`${size} B\` | ✅ Verificado | [Abrir ↗](https://javiergalilea.es/$dir/) |" >> $GITHUB_STEP_SUMMARY
+          }
+
+          check_project "01" "Simulador de Partículas" "pr_particulas"
+          check_project "02" "Autómatas Celulares" "pr_automata"
+          check_project "03" "Ondas & Laboratorio de Sonido" "pr_ondas"
+          check_project "04" "Diagnóstico del Dispositivo" "pr_dispositivo"
+          check_project "05" "Explorador de Fractales" "pr_fractales"
+          check_project "06" "Reloj Cósmico & Túnel TV" "pr_reloj"
+          check_project "07" "Kiosco de Noticias Dinámico" "pr_noticias"
+          check_project "08" "Escultura Tipográfica 3D" "pr_letras3d"
+
+      - name: "⚙️ Configurar entorno de GitHub Pages"
+        uses: actions/configure-pages@v5
+
+      - name: "📦 Subir artefacto estático para producción"
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+  deploy:
+    name: "🌐 Publicar en Producción (javiergalilea.es)"
+    needs: build-and-verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: "🚀 Desplegar en GitHub Pages (HTTPS)"
+        id: deployment
+        uses: actions/deploy-pages@v4
