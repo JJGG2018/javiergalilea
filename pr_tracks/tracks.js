@@ -1001,6 +1001,41 @@
     return list;
   }
 
+  function pickGridStepDeg(spanDeg, targetLines) {
+    const raw = Math.max(0.000005, Math.abs(spanDeg) / Math.max(2, targetLines));
+    const steps = [
+      30, 15, 10, 5, 2, 1,
+      0.5, 0.2, 0.1,
+      0.05, 0.02, 0.01,
+      0.005, 0.002, 0.001,
+      0.0005, 0.0002, 0.0001,
+      0.00005, 0.00002, 0.00001
+    ];
+    for (let i = 0; i < steps.length; i++) {
+      if (raw >= steps[i]) return steps[i];
+    }
+    return 0.00001;
+  }
+
+  function decimalsForStep(step) {
+    if (step >= 1) return 1;
+    if (step >= 0.1) return 2;
+    if (step >= 0.01) return 3;
+    if (step >= 0.001) return 4;
+    if (step >= 0.0001) return 5;
+    return 6;
+  }
+
+  function formatLatLabel(lat, decimals) {
+    const hemi = lat >= 0 ? 'N' : 'S';
+    return Math.abs(lat).toFixed(decimals) + '° ' + hemi;
+  }
+
+  function formatLonLabel(lon, decimals) {
+    const hemi = lon >= 0 ? 'E' : 'W';
+    return Math.abs(lon).toFixed(decimals) + '° ' + hemi;
+  }
+
   function renderCanvas(nowMs) {
     const w = canvas.width;
     const h = canvas.height;
@@ -1009,28 +1044,160 @@
     const nowSec = nowMs * 0.001;
     const users = getAllRegisteredUsers();
 
-    // Si estamos en modo Radar Puro o hay un usuario local dado de alta, dibujar rejilla sutil
+    // Cuadrícula geográfica real con Latitud y Longitud en Radar Puro (y sutil cuando estás dado de alta)
     if (mapStyle === 'grid' || localUser.isRegistered) {
-      const refPt = localUser.isRegistered
-        ? latLonToScreen(localUser.lat, localUser.lon)
-        : { x: w * 0.5, y: h * 0.5 };
+      const nw = screenToLatLon(0, 0);
+      const se = screenToLatLon(w, h);
+      const minLat = Math.min(nw.lat, se.lat);
+      const maxLat = Math.max(nw.lat, se.lat);
+      const minLon = Math.min(nw.lon, se.lon);
+      const maxLon = Math.max(nw.lon, se.lon);
+
+      const latSpan = Math.max(0.00002, maxLat - minLat);
+      const lonSpan = Math.max(0.00002, maxLon - minLon);
+
+      const targetCols = Math.max(4, Math.min(12, Math.floor(w / 140)));
+      const targetRows = Math.max(4, Math.min(10, Math.floor(h / 120)));
+
+      const lonStep = pickGridStepDeg(lonSpan, targetCols);
+      const latStep = pickGridStepDeg(latSpan, targetRows);
+      const lonDec = decimalsForStep(lonStep);
+      const latDec = decimalsForStep(latStep);
 
       ctx.save();
-      ctx.strokeStyle = mapStyle === 'grid' ? 'rgba(0, 245, 212, 0.12)' : 'rgba(0, 245, 212, 0.04)';
+
+      // Sub-retícula secundaria en modo Radar Puro
+      if (mapStyle === 'grid') {
+        const subLonStep = lonStep * 0.25;
+        const subLatStep = latStep * 0.25;
+        ctx.strokeStyle = 'rgba(0, 245, 212, 0.045)';
+        ctx.lineWidth = 1;
+
+        const firstSubLon = Math.floor(minLon / subLonStep) * subLonStep;
+        for (let lon = firstSubLon, guard = 0; lon <= maxLon && guard < 120; lon += subLonStep, guard++) {
+          const sx = latLonToScreen(minLat, lon).x;
+          ctx.beginPath();
+          ctx.moveTo(sx, 0);
+          ctx.lineTo(sx, h);
+          ctx.stroke();
+        }
+
+        const firstSubLat = Math.floor(minLat / subLatStep) * subLatStep;
+        for (let lat = firstSubLat, guard = 0; lat <= maxLat && guard < 120; lat += subLatStep, guard++) {
+          const sy = latLonToScreen(lat, minLon).y;
+          ctx.beginPath();
+          ctx.moveTo(0, sy);
+          ctx.lineTo(w, sy);
+          ctx.stroke();
+        }
+      }
+
+      // Líneas principales de Longitud (meridianos) y Latitud (paralelos)
+      ctx.strokeStyle = mapStyle === 'grid' ? 'rgba(0, 245, 212, 0.18)' : 'rgba(0, 245, 212, 0.05)';
       ctx.lineWidth = 1;
-      const gridStep = 90;
-      for (let x = (refPt.x % gridStep + gridStep) % gridStep; x < w; x += gridStep) {
+
+      const firstLon = Math.floor(minLon / lonStep) * lonStep;
+      const lonLines = [];
+      for (let lon = firstLon, guard = 0; lon <= maxLon && guard < 40; lon += lonStep, guard++) {
+        const sx = latLonToScreen(minLat, lon).x;
+        lonLines.push({ lon, x: sx });
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
+        ctx.moveTo(sx, 0);
+        ctx.lineTo(sx, h);
         ctx.stroke();
       }
-      for (let y = (refPt.y % gridStep + gridStep) % gridStep; y < h; y += gridStep) {
+
+      const firstLat = Math.floor(minLat / latStep) * latStep;
+      const latLines = [];
+      for (let lat = firstLat, guard = 0; lat <= maxLat && guard < 40; lat += latStep, guard++) {
+        const sy = latLonToScreen(lat, minLon).y;
+        latLines.push({ lat, y: sy });
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
+        ctx.moveTo(0, sy);
+        ctx.lineTo(w, sy);
         ctx.stroke();
       }
+
+      // Etiquetas de Latitud y Longitud y cruces tácticas en modo Radar Puro
+      if (mapStyle === 'grid') {
+        // Cruces en las intersecciones de la cuadrícula
+        ctx.strokeStyle = 'rgba(0, 245, 212, 0.42)';
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < lonLines.length; i++) {
+          for (let j = 0; j < latLines.length; j++) {
+            const ix = lonLines[i].x;
+            const iy = latLines[j].y;
+            ctx.beginPath();
+            ctx.moveTo(ix - 4, iy);
+            ctx.lineTo(ix + 4, iy);
+            ctx.moveTo(ix, iy - 4);
+            ctx.lineTo(ix, iy + 4);
+            ctx.stroke();
+          }
+        }
+
+        ctx.font = '600 10.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+
+        // Etiquetas de LONGITUD en el eje superior (bajo la topbar)
+        const topLabelY = 82;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let i = 0; i < lonLines.length; i++) {
+          const item = lonLines[i];
+          if (item.x < 70 || item.x > w - 70) continue;
+          const text = 'LON ' + formatLonLabel(item.lon, lonDec);
+          const tw = ctx.measureText(text).width + 12;
+          ctx.fillStyle = 'rgba(5, 9, 16, 0.86)';
+          ctx.strokeStyle = 'rgba(0, 245, 212, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(item.x - tw * 0.5, topLabelY - 10, tw, 20, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#00f5d4';
+          ctx.fillText(text, item.x, topLabelY + 0.5);
+        }
+
+        // Etiquetas de LATITUD en el eje izquierdo
+        const leftLabelX = 16;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        for (let j = 0; j < latLines.length; j++) {
+          const item = latLines[j];
+          if (item.y < 110 || item.y > h - 120) continue;
+          const text = 'LAT ' + formatLatLabel(item.lat, latDec);
+          const tw = ctx.measureText(text).width + 12;
+          ctx.fillStyle = 'rgba(5, 9, 16, 0.86)';
+          ctx.strokeStyle = 'rgba(0, 245, 212, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(leftLabelX, item.y - 10, tw, 20, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#00f5d4';
+          ctx.fillText(text, leftLabelX + 6, item.y + 0.5);
+        }
+
+        // Coordenadas en las intersecciones centrales para lectura directa en la cuadrícula
+        ctx.font = '500 9.5px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.72)';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        for (let i = 0; i < lonLines.length; i++) {
+          const lx = lonLines[i].x;
+          if (lx < 120 || lx > w - 160) continue;
+          for (let j = 0; j < latLines.length; j++) {
+            const ly = latLines[j].y;
+            if (ly < 115 || ly > h - 135) continue;
+            const coordStr =
+              latLines[j].lat.toFixed(latDec) + '°, ' + lonLines[i].lon.toFixed(lonDec) + '°';
+            ctx.fillText(coordStr, lx + 6, ly + 5);
+          }
+        }
+      }
+
       ctx.restore();
     }
 
