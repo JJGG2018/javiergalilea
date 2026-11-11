@@ -68,6 +68,7 @@
   const pointCountEl = document.getElementById('pointCount');
   const myDistStatEl = document.getElementById('myDistStat');
   const wasmTimeEl = document.getElementById('wasmTime');
+  const zoomLevelStatEl = document.getElementById('zoomLevelStat');
   const netStatusDot = document.getElementById('netStatusDot');
   const netProviderLabel = document.getElementById('netProviderLabel');
 
@@ -93,8 +94,8 @@
 
   // --- 4. MAPA CARTOGRÁFICO (LEAFLET + FALLBACK MERCATOR) ---
   let map = null;
-  let tileLayer = null;
-  let satLabelsLayer = null;
+  let activeTileLayer = null;
+  let baseLayers = {};
   let fallbackZoom = 15;
 
   const CARTO_API_KEY = 'cb1_573d_1_8c20f8aa768b764e7c67f1c8';
@@ -102,9 +103,25 @@
   const TILE_URLS = {
     cyber: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png?key=' + CARTO_API_KEY,
     night: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png?key=' + CARTO_API_KEY,
-    sat: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&scale=2',
-    satLabels: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}@2x.png?key=' + CARTO_API_KEY
+    sat: 'https://{s}.google.com/vt/lyrs=y&hl=es&x={x}&y={y}&z={z}'
   };
+
+  function updateZoomIndicator() {
+    const z = map ? map.getZoom() : fallbackZoom;
+    if (zoomLevelStatEl) {
+      zoomLevelStatEl.textContent = Number.isInteger(z) ? String(z) : z.toFixed(1);
+    }
+  }
+
+  function changeMapZoom(delta) {
+    if (map) {
+      const target = Math.max(2, Math.min(22, Math.round(map.getZoom() + delta)));
+      map.setZoom(target);
+    } else {
+      fallbackZoom = Math.max(2, Math.min(22, fallbackZoom + delta));
+    }
+    updateZoomIndicator();
+  }
 
   function initMap() {
     mapContainer.className = 'style-' + mapStyle;
@@ -113,24 +130,38 @@
       map = window.L.map('mapContainer', {
         center: [centerLat, centerLon],
         zoom: 15,
+        minZoom: 2,
         maxZoom: 22,
         zoomControl: false,
         attributionControl: true
       });
 
-      tileLayer = window.L.tileLayer(TILE_URLS.cyber, {
-        maxNativeZoom: 20,
-        maxZoom: 22,
-        subdomains: 'abcd',
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
-      }).addTo(map);
+      baseLayers = {
+        cyber: window.L.tileLayer(TILE_URLS.cyber, {
+          maxNativeZoom: 20,
+          maxZoom: 22,
+          subdomains: 'abcd',
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }),
+        night: window.L.tileLayer(TILE_URLS.night, {
+          maxNativeZoom: 20,
+          maxZoom: 22,
+          subdomains: 'abcd',
+          attribution: '&copy; OpenStreetMap &copy; CARTO'
+        }),
+        sat: window.L.tileLayer(TILE_URLS.sat, {
+          maxNativeZoom: 21,
+          maxZoom: 22,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Satellite HD &copy; OpenStreetMap'
+        })
+      };
 
-      satLabelsLayer = window.L.tileLayer(TILE_URLS.satLabels, {
-        maxNativeZoom: 20,
-        maxZoom: 22,
-        subdomains: 'abcd',
-        pane: 'overlayPane'
-      });
+      activeTileLayer = baseLayers.cyber.addTo(map);
+      map.setMaxZoom(22);
+      updateZoomIndicator();
+
+      map.on('zoom zoomend', updateZoomIndicator);
 
       // Click en el mapa para situar o mover tu baliza cuando estás dado de alta
       map.on('click', function (e) {
@@ -158,25 +189,32 @@
         localUser.targetLat = pt.lat;
         localUser.targetLon = pt.lon;
       });
+      mapContainer.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        changeMapZoom(e.deltaY < 0 ? 1 : -1);
+      }, { passive: false });
+      updateZoomIndicator();
     }
   }
 
   function setMapStyle(style) {
     mapStyle = style;
     mapContainer.className = 'style-' + style;
-    if (map && tileLayer && TILE_URLS[style]) {
-      tileLayer.options.maxNativeZoom = style === 'sat' ? 21 : 20;
-      tileLayer.setUrl(TILE_URLS[style]);
+    if (!map) return;
+
+    if (activeTileLayer && map.hasLayer(activeTileLayer)) {
+      map.removeLayer(activeTileLayer);
+      activeTileLayer = null;
     }
-    if (map && satLabelsLayer) {
-      if (style === 'sat') {
-        if (!map.hasLayer(satLabelsLayer)) {
-          satLabelsLayer.addTo(map);
-        }
-      } else if (map.hasLayer(satLabelsLayer)) {
-        map.removeLayer(satLabelsLayer);
+
+    if (baseLayers[style]) {
+      activeTileLayer = baseLayers[style].addTo(map);
+      map.setMaxZoom(22);
+      if (style === 'sat' && map.getZoom() < 18) {
+        map.setZoom(18);
       }
     }
+    updateZoomIndicator();
   }
 
   function latLonToScreen(lat, lon) {
@@ -1381,6 +1419,33 @@
       });
     });
 
+    // Controles e indicador de nivel de Zoom (2 - 22)
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener('click', function () {
+        changeMapZoom(1);
+      });
+    }
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener('click', function () {
+        changeMapZoom(-1);
+      });
+    }
+    if (zoomResetBtn) {
+      zoomResetBtn.addEventListener('click', function () {
+        if (map) {
+          const nextZ = map.getZoom() < 19 ? 19 : 15;
+          map.setZoom(nextZ);
+        } else {
+          fallbackZoom = fallbackZoom < 19 ? 19 : 15;
+        }
+        updateZoomIndicator();
+      });
+    }
+
     // Saltos rápidos de vista de ciudad
     document.querySelectorAll('.city-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -1390,7 +1455,7 @@
         const lon = parseFloat(btn.dataset.lon);
         centerLat = lat;
         centerLon = lon;
-        if (map) map.flyTo([lat, lon], 15, { duration: 0.9 });
+        if (map) map.flyTo([lat, lon], Math.max(map.getZoom(), 15), { duration: 0.9 });
       });
     });
 
@@ -1406,7 +1471,7 @@
         registerModal.classList.remove('hidden');
         return;
       }
-      if (map) map.flyTo([localUser.lat, localUser.lon], 16, { duration: 0.6 });
+      if (map) map.flyTo([localUser.lat, localUser.lon], Math.max(map.getZoom(), 18), { duration: 0.6 });
     });
 
     document.getElementById('shareRoomBtn').addEventListener('click', function (e) {

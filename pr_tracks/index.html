@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#05070c">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="tracks.css">
+  <link rel="stylesheet" href="tracks.css?v=20261111b">
 </head>
 <body>
   <!-- Mapa Cartográfico Real + Lienzo Sincronizado de Tracks Neón -->
@@ -37,6 +37,11 @@
         <span class="stat-pill status-pill" id="netStatusPill" title="Estado del canal de sincronización en tiempo real">
           <span class="status-dot online" id="netStatusDot"></span>
           <strong id="netProviderLabel">LIVE</strong>
+        </span>
+        <span class="stat-pill zoom-pill" title="Nivel de zoom actual (rango 2 a 22)">
+          <button type="button" id="zoomOutBtn" class="zoom-step-btn" title="Alejar mapa (-)" aria-label="Alejar zoom">−</button>
+          <span class="zoom-readout" id="zoomResetBtn" title="Pulsa para saltar a zoom de detalle (Z19)">ZOOM <strong id="zoomLevelStat">15</strong><small>/22</small></span>
+          <button type="button" id="zoomInBtn" class="zoom-step-btn" title="Acercar mapa (+)" aria-label="Acercar zoom">+</button>
         </span>
         <span class="stat-pill"><strong id="userCount">0</strong> dados de alta</span>
         <span class="stat-pill"><strong id="pointCount">0</strong> pts</span>
@@ -337,6 +342,6 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="tracks.js"></script>
+  <script src="tracks.js?v=20261111b"></script>
 </body>
 </html>
