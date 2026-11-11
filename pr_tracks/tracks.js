@@ -1,42 +1,27 @@
 /**
  * Subproyecto #09: Radar & Tracks Multiusuario (3 Letras) — Javier Galilea (Rust + WebAssembly)
  * javiergalilea.es/pr_tracks/
+ *
+ * Solo aparecen en el mapa los usuarios reales que se dan de alta en la sala con su código de 3 letras.
  */
 
 (function () {
   'use strict';
 
-  const MAX_AGENTS = 32;
   const MAX_TRACK_POINTS = 2048;
 
-  // --- 1. ESTADO DEL MOTOR RUST WEBASSEMBLY ---
+  // --- 1. ESTADO DEL MOTOR GEODÉSICO RUST WEBASSEMBLY ---
   let wasmExports = null;
   let wasmMemory = null;
-  let agentsPtr = 0;
   let trackPointsPtr = 0;
-  let lastWasmMs = 0.06;
-
-  // Catálogo de bots de 3 letras para pruebas multiusuario instantáneas
-  const BOT_CALLSIGNS = [
-    { id: 'ANA', color: '#f72585' },
-    { id: 'MAX', color: '#3b82f6' },
-    { id: 'LEO', color: '#ffbe0b' },
-    { id: 'ZOE', color: '#a855f7' },
-    { id: 'KAI', color: '#10b981' },
-    { id: 'SOL', color: '#fb5607' },
-    { id: 'NEO', color: '#38bdf8' },
-    { id: 'EVA', color: '#ec4899' },
-    { id: 'REX', color: '#84cc16' },
-    { id: 'MIA', color: '#f43f5e' }
-  ];
+  let lastWasmMs = 0.04;
 
   // --- 2. PARÁMETROS INICIALES Y PERSISTENCIA ---
   const urlParams = new URLSearchParams(window.location.search);
-  const savedCallsign = (urlParams.get('id') || localStorage.getItem('jg_tracks_callsign') || 'JGG')
+  const savedCallsign = (urlParams.get('id') || localStorage.getItem('jg_tracks_callsign') || '')
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-    .slice(0, 3)
-    .padEnd(3, 'X');
+    .slice(0, 3);
   const savedColor = localStorage.getItem('jg_tracks_color') || '#00f5d4';
   const savedRoom = (urlParams.get('room') || localStorage.getItem('jg_tracks_room') || 'SALA-JG1')
     .toUpperCase()
@@ -45,36 +30,34 @@
 
   let maxTrailPoints = 300;
   let mapStyle = 'cyber'; // 'cyber' | 'night' | 'sat' | 'grid'
-  let moveMode = 'manual'; // 'manual' | 'autopilot' | 'gps'
+  let moveMode = 'gps';   // 'gps' | 'manual'
   let gpsWatchId = null;
 
-  // Centro geográfico activo (por defecto: Madrid — Puerta del Sol)
+  // Vista inicial del mapa (Madrid por defecto hasta que el GPS centre la cámara)
   let centerLat = 40.4168;
   let centerLon = -3.7038;
 
-  // Usuario local (identificado con 3 letras)
+  // Usuario local (solo se pinta y transmite cuando isRegistered === true)
   const sessionUid = 'u_' + Math.random().toString(36).slice(2, 9);
   const localUser = {
     uid: sessionUid,
-    id: savedCallsign,
+    id: savedCallsign.length === 3 ? savedCallsign : 'JGG',
     color: savedColor,
     lat: centerLat,
     lon: centerLon,
     targetLat: null,
     targetLon: null,
-    heading: 45,
+    heading: 0,
     speed: 0,
     totalDistM: 0,
     isLocal: true,
-    isBot: false,
+    isRegistered: false,
     lastSeen: Date.now(),
-    trail: [{ lat: centerLat, lon: centerLon, ts: Date.now() }]
+    trail: []
   };
 
-  // Mapa de usuarios remotos (por uid o callsign) y lista de bots activos
+  // Usuarios remotos dados de alta en la sala actual
   const remoteUsers = new Map();
-  const activeBots = [];
-  let botCount = 3;
 
   // --- 3. ELEMENTOS DOM ---
   const mapContainer = document.getElementById('mapContainer');
@@ -88,6 +71,10 @@
   const netStatusDot = document.getElementById('netStatusDot');
   const netProviderLabel = document.getElementById('netProviderLabel');
 
+  const registerTopBtn = document.getElementById('registerTopBtn');
+  const registerTopBtnLabel = document.getElementById('registerTopBtnLabel');
+  const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+
   const callsignInput = document.getElementById('callsignInput');
   const callsignPreview = document.getElementById('callsignPreview');
   const roomInput = document.getElementById('roomInput');
@@ -97,6 +84,12 @@
   const trailSlider = document.getElementById('trailSlider');
   const trailLabel = document.getElementById('trailLabel');
   const gpsBtn = document.getElementById('gpsBtn');
+
+  const registerModal = document.getElementById('registerModal');
+  const registerForm = document.getElementById('registerForm');
+  const regCallsignInput = document.getElementById('regCallsignInput');
+  const regRoomInput = document.getElementById('regRoomInput');
+  const regFeedback = document.getElementById('regFeedback');
 
   // --- 4. MAPA CARTOGRÁFICO (LEAFLET + FALLBACK MERCATOR) ---
   let map = null;
@@ -126,19 +119,28 @@
         attribution: '&copy; OpenStreetMap &copy; CARTO'
       }).addTo(map);
 
-      // Click en el mapa para dirigir nuestro avatar de 3 letras
+      // Click en el mapa para situar o mover tu baliza cuando estás dado de alta
       map.on('click', function (e) {
-        if (moveMode === 'gps') return;
-        if (moveMode === 'autopilot') {
+        if (!localUser.isRegistered) {
+          return;
+        }
+        if (moveMode === 'gps') {
           setMoveMode('manual');
         }
-        localUser.targetLat = e.latlng.lat;
-        localUser.targetLon = e.latlng.lng;
+        if (localUser.trail.length === 0) {
+          localUser.lat = e.latlng.lat;
+          localUser.lon = e.latlng.lng;
+          localUser.trail.push({ lat: localUser.lat, lon: localUser.lon, ts: Date.now() });
+          broadcastPosition(true);
+        } else {
+          localUser.targetLat = e.latlng.lat;
+          localUser.targetLon = e.latlng.lng;
+        }
         if (canvasHint) canvasHint.classList.add('fade-out');
       });
     } else {
-      // Fallback interactivo si Leaflet CDN no está disponible
       mapContainer.addEventListener('pointerdown', function (e) {
+        if (!localUser.isRegistered) return;
         const pt = screenToLatLon(e.clientX, e.clientY);
         localUser.targetLat = pt.lat;
         localUser.targetLon = pt.lon;
@@ -159,8 +161,8 @@
       const pt = map.latLngToContainerPoint([lat, lon]);
       return { x: pt.x, y: pt.y };
     }
-    const scale = Math.pow(2, fallbackZoom) * 256 / 360;
-    const cosLat = Math.cos(centerLat * Math.PI / 180);
+    const scale = (Math.pow(2, fallbackZoom) * 256) / 360;
+    const cosLat = Math.cos((centerLat * Math.PI) / 180);
     const x = canvas.width * 0.5 + (lon - centerLon) * scale * cosLat;
     const y = canvas.height * 0.5 - (lat - centerLat) * scale;
     return { x, y };
@@ -171,8 +173,8 @@
       const ll = map.containerPointToLatLng([x, y]);
       return { lat: ll.lat, lon: ll.lng };
     }
-    const scale = Math.pow(2, fallbackZoom) * 256 / 360;
-    const cosLat = Math.cos(centerLat * Math.PI / 180);
+    const scale = (Math.pow(2, fallbackZoom) * 256) / 360;
+    const cosLat = Math.cos((centerLat * Math.PI) / 180);
     const lon = centerLon + (x - canvas.width * 0.5) / (scale * cosLat);
     const lat = centerLat - (y - canvas.height * 0.5) / scale;
     return { lat, lon };
@@ -207,7 +209,7 @@
     return (Math.atan2(y, x) * toDeg + 360) % 360;
   }
 
-  function appendTrackPoint(user, lat, lon, minStepMeters = 2.5) {
+  function appendTrackPoint(user, lat, lon, minStepMeters = 2.0) {
     const trail = user.trail;
     const now = Date.now();
     if (trail.length === 0) {
@@ -228,48 +230,94 @@
     return false;
   }
 
-  // --- 6. INICIALIZAR BOTS MULTIUSUARIO DE 3 LETRAS ---
-  function syncBotCount(targetCount) {
-    botCount = Math.max(0, Math.min(BOT_CALLSIGNS.length, targetCount));
-
-    while (activeBots.length < botCount) {
-      const idx = activeBots.length;
-      const spec = BOT_CALLSIGNS[idx];
-      const angle = (idx * Math.PI * 2) / 5;
-      const r = 0.0028 + (idx % 3) * 0.0014;
-      const bLat = centerLat + Math.sin(angle) * r;
-      const bLon = centerLon + Math.cos(angle) * r;
-
-      activeBots.push({
-        uid: 'bot_' + spec.id,
-        id: spec.id,
-        color: spec.color,
-        lat: bLat,
-        lon: bLon,
-        heading: (idx * 72) % 360,
-        speed: 14.5,
-        totalDistM: 0,
-        phase: idx * 1.35,
-        isLocal: false,
-        isBot: true,
-        trail: [{ lat: bLat, lon: bLon, ts: Date.now() }]
-      });
-
-      if (wasmExports && wasmMemory && agentsPtr) {
-        const view = new Float32Array(wasmMemory.buffer, agentsPtr, MAX_AGENTS * 8);
-        const base = idx * 8;
-        view[base] = bLat;
-        view[base + 1] = bLon;
-        view[base + 4] = (idx * 72) % 360;
-        view[base + 5] = 14.5;
-        view[base + 6] = 0;
-        view[base + 7] = idx * 1.35;
-      }
+  // --- 6. ALTA Y BAJA DE USUARIO EN EL MAPA ---
+  function registerLocalUser(callsign3, colorHex, roomCode, initialMode) {
+    const cleanId = String(callsign3 || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .slice(0, 3);
+    if (cleanId.length !== 3) {
+      if (regFeedback) regFeedback.textContent = '⚠️ Introduce exactamente 3 letras o números (ej. JGG)';
+      return false;
     }
 
-    while (activeBots.length > botCount) {
-      activeBots.pop();
+    const cleanRoom = String(roomCode || 'SALA-JG1')
+      .toUpperCase()
+      .replace(/[^A-Z0-9-_]/g, '')
+      .slice(0, 14) || 'SALA-JG1';
+
+    const roomChanged = cleanRoom !== currentRoom;
+    currentRoom = cleanRoom;
+
+    localUser.id = cleanId;
+    localUser.color = colorHex || localUser.color;
+    localUser.isRegistered = true;
+    localUser.lastSeen = Date.now();
+
+    if (map) {
+      const c = map.getCenter();
+      localUser.lat = c.lat;
+      localUser.lon = c.lng;
+      centerLat = c.lat;
+      centerLon = c.lng;
     }
+
+    localUser.targetLat = null;
+    localUser.targetLon = null;
+    localUser.totalDistM = 0;
+    localUser.trail = [{ lat: localUser.lat, lon: localUser.lon, ts: Date.now() }];
+
+    // Guardar preferencias
+    localStorage.setItem('jg_tracks_callsign', localUser.id);
+    localStorage.setItem('jg_tracks_color', localUser.color);
+    localStorage.setItem('jg_tracks_room', currentRoom);
+
+    // Sincronizar UI del dock y barra superior
+    callsignInput.value = localUser.id;
+    callsignPreview.textContent = localUser.id;
+    roomInput.value = currentRoom;
+    roomBadge.textContent = currentRoom;
+    registerTopBtnLabel.textContent = '🟢 Alta: ' + localUser.id;
+    leaveRoomBtn.classList.remove('hidden');
+
+    document.querySelectorAll('.swatch-btn').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.color === localUser.color);
+    });
+
+    if (roomChanged) {
+      remoteUsers.clear();
+      connectRealtimeBackend();
+    }
+
+    setMoveMode(initialMode || 'gps');
+    broadcastPosition(true);
+    renderRoster();
+
+    if (canvasHint) {
+      canvasHint.textContent =
+        initialMode === 'gps'
+          ? `🛰️ Dado de alta como [${localUser.id}] con GPS Real · También puedes hacer clic en el mapa para moverte`
+          : `🛰️ Dado de alta como [${localUser.id}] · Haz clic en cualquier calle del mapa o usa WASD/Flechas para pintar tu track`;
+    }
+
+    registerModal.classList.add('hidden');
+    return true;
+  }
+
+  function unregisterLocalUser() {
+    if (!localUser.isRegistered) return;
+    stopRealGps();
+    sendLeavePacket();
+
+    localUser.isRegistered = false;
+    localUser.trail = [];
+    localUser.totalDistM = 0;
+    localUser.targetLat = null;
+    localUser.targetLon = null;
+
+    callsignPreview.textContent = '---';
+    registerTopBtnLabel.textContent = '➕ Darme de Alta';
+    leaveRoomBtn.classList.add('hidden');
     renderRoster();
   }
 
@@ -307,24 +355,112 @@
       heading: Math.round(localUser.heading),
       speed: Number(localUser.speed.toFixed(1)),
       dist: Math.round(localUser.totalDistM),
-      trail: localUser.trail.slice(-80).map(p => [Number(p.lat.toFixed(5)), Number(p.lon.toFixed(5))]),
+      trail: localUser.trail.slice(-100).map(p => [Number(p.lat.toFixed(5)), Number(p.lon.toFixed(5))]),
       ts: Date.now()
     };
   }
 
+  function sendRawPacket(pkt) {
+    if (broadcastChan) {
+      try { broadcastChan.postMessage(pkt); } catch (_) {}
+    }
+
+    const provider = backendConfig.provider;
+    if (provider === 'builtin' && activeSocket && activeSocket.readyState === 1) {
+      try {
+        const topic = 'javiergalilea/pr_tracks/' + currentRoom;
+        activeSocket.send(buildMqttPublish(topic, JSON.stringify(pkt)));
+      } catch (_) {}
+    } else if (provider === 'supabase' && activeSocket && activeSocket.readyState === 1) {
+      activeSocket.send(
+        JSON.stringify({
+          topic: 'realtime:tracks_' + currentRoom,
+          event: 'broadcast',
+          payload: { type: 'broadcast', event: 'pos', payload: pkt },
+          ref: String(Date.now())
+        })
+      );
+    } else if (provider === 'custom_ws' && activeSocket && activeSocket.readyState === 1) {
+      activeSocket.send(JSON.stringify(pkt));
+    } else if (provider === 'firebase' && backendConfig.fbUrl && pkt.type === 'track_pos') {
+      const baseUrl = backendConfig.fbUrl.replace(/\/+$/, '');
+      const authParam = backendConfig.fbSecret
+        ? '?auth=' + encodeURIComponent(backendConfig.fbSecret)
+        : '';
+      fetch(
+        `${baseUrl}/rooms/${encodeURIComponent(currentRoom)}/users/${encodeURIComponent(localUser.id + '_' + localUser.uid)}.json${authParam}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pkt)
+        }
+      ).catch(function () {});
+    }
+  }
+
+  function sendSyncRequest() {
+    sendRawPacket({
+      type: 'track_sync_req',
+      room: currentRoom,
+      uid: localUser.uid,
+      ts: Date.now()
+    });
+  }
+
+  function sendLeavePacket() {
+    sendRawPacket({
+      type: 'track_leave',
+      room: currentRoom,
+      uid: localUser.uid,
+      id: localUser.id,
+      ts: Date.now()
+    });
+
+    if (backendConfig.provider === 'firebase' && backendConfig.fbUrl) {
+      const baseUrl = backendConfig.fbUrl.replace(/\/+$/, '');
+      const authParam = backendConfig.fbSecret
+        ? '?auth=' + encodeURIComponent(backendConfig.fbSecret)
+        : '';
+      fetch(
+        `${baseUrl}/rooms/${encodeURIComponent(currentRoom)}/users/${encodeURIComponent(localUser.id + '_' + localUser.uid)}.json${authParam}`,
+        { method: 'DELETE' }
+      ).catch(function () {});
+    }
+  }
+
   function handleIncomingPacket(pkt) {
-    if (!pkt || pkt.type !== 'track_pos') return;
+    if (!pkt || typeof pkt !== 'object') return;
     if (pkt.room && pkt.room !== currentRoom) return;
     if (pkt.uid === localUser.uid) return;
 
-    const cleanId = String(pkt.id || 'USR')
+    // Si otro navegador entra a la sala y pide sincronización, responder con nuestra posición si estamos dados de alta
+    if (pkt.type === 'track_sync_req') {
+      if (localUser.isRegistered) {
+        broadcastPosition(true);
+      }
+      return;
+    }
+
+    // Si un usuario se da de baja de la sala, eliminarlo del mapa inmediatamente
+    if (pkt.type === 'track_leave') {
+      if (pkt.uid && remoteUsers.has(pkt.uid)) {
+        remoteUsers.delete(pkt.uid);
+        renderRoster();
+      }
+      return;
+    }
+
+    if (pkt.type !== 'track_pos') return;
+
+    const cleanId = String(pkt.id || '')
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '')
-      .slice(0, 3)
-      .padEnd(3, 'X');
-    const key = pkt.uid || ('rem_' + cleanId);
+      .slice(0, 3);
+    if (cleanId.length !== 3) return;
 
+    const key = pkt.uid || ('rem_' + cleanId);
     let rUser = remoteUsers.get(key);
+
     if (!rUser) {
       rUser = {
         uid: key,
@@ -336,7 +472,6 @@
         speed: Number(pkt.speed) || 0,
         totalDistM: Number(pkt.dist) || 0,
         isLocal: false,
-        isBot: false,
         lastSeen: Date.now(),
         trail: []
       };
@@ -350,6 +485,7 @@
         rUser.trail.push({ lat: rUser.lat, lon: rUser.lon, ts: Date.now() });
       }
       remoteUsers.set(key, rUser);
+      renderRoster();
     } else {
       rUser.id = cleanId;
       rUser.color = pkt.color || rUser.color;
@@ -403,7 +539,7 @@
     const pBytes = new TextEncoder().encode(jsonStr);
     const rem = encodeMqttRemainingLength(tBytes.length + pBytes.length);
     const pkt = new Uint8Array(1 + rem.length + tBytes.length + pBytes.length);
-    pkt[0] = 0x30; // PUBLISH QoS 0
+    pkt[0] = 0x30;
     pkt.set(rem, 1);
     pkt.set(tBytes, 1 + rem.length);
     pkt.set(pBytes, 1 + rem.length + tBytes.length);
@@ -419,7 +555,6 @@
       const topic = 'javiergalilea/pr_tracks/' + currentRoom;
 
       ws.onopen = function () {
-        // 1. MQTT CONNECT packet (v3.1.1)
         const proto = new Uint8Array([0x00, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3c]);
         const cid = encodeMqttUtf8('jg_' + localUser.uid);
         const rem = encodeMqttRemainingLength(proto.length + cid.length);
@@ -430,7 +565,6 @@
         connPkt.set(cid, 1 + rem.length + proto.length);
         ws.send(connPkt);
 
-        // 2. MQTT SUBSCRIBE packet
         const subTopic = encodeMqttUtf8(topic);
         const subRem = encodeMqttRemainingLength(2 + subTopic.length + 1);
         const subPkt = new Uint8Array(1 + subRem.length + 2 + subTopic.length + 1);
@@ -443,7 +577,10 @@
         ws.send(subPkt);
 
         setNetStatus('online', 'LIVE · ' + currentRoom);
-        broadcastPosition(true);
+        sendSyncRequest();
+        if (localUser.isRegistered) {
+          broadcastPosition(true);
+        }
       };
 
       ws.onmessage = function (ev) {
@@ -474,12 +611,12 @@
   function connectRealtimeBackend() {
     disconnectBackends();
 
-    // 1. Siempre activar BroadcastChannel local para sincronización instantánea multipestaña
     if (typeof BroadcastChannel !== 'undefined') {
       broadcastChan = new BroadcastChannel('jg_tracks_room_' + currentRoom);
       broadcastChan.onmessage = function (ev) {
         handleIncomingPacket(ev.data);
       };
+      sendSyncRequest();
     }
 
     const provider = backendConfig.provider;
@@ -491,7 +628,6 @@
     } else if (provider === 'custom_ws' && backendConfig.wsUrl) {
       connectCustomWebSocket(backendConfig.wsUrl, 'WS PROPIO');
     } else {
-      // Canal híbrido integrado por defecto (BroadcastChannel + Relay MQTT WSS)
       connectBuiltinMqttRelay();
     }
   }
@@ -503,12 +639,12 @@
       activeSocket = ws;
       ws.onopen = function () {
         setNetStatus('online', badgeText);
-        ws.send(JSON.stringify(buildStatePacket()));
+        sendSyncRequest();
+        if (localUser.isRegistered) broadcastPosition(true);
       };
       ws.onmessage = function (ev) {
         try {
-          const data = JSON.parse(ev.data);
-          handleIncomingPacket(data);
+          handleIncomingPacket(JSON.parse(ev.data));
         } catch (_) {}
       };
       ws.onerror = function () {
@@ -538,7 +674,6 @@
 
       ws.onopen = function () {
         setNetStatus('online', 'SUPABASE RT');
-        // Unirse al canal Phoenix de Supabase Realtime Broadcast
         ws.send(
           JSON.stringify({
             topic: topic,
@@ -547,6 +682,10 @@
             ref: '1'
           })
         );
+        setTimeout(function () {
+          sendSyncRequest();
+          if (localUser.isRegistered) broadcastPosition(true);
+        }, 300);
       };
 
       ws.onmessage = function (ev) {
@@ -593,50 +732,27 @@
   }
 
   function broadcastPosition(force = false) {
+    if (!localUser.isRegistered) return;
     const now = Date.now();
     if (!force && now - lastBroadcastTs < 180) return;
     lastBroadcastTs = now;
-
-    const pkt = buildStatePacket();
-
-    if (broadcastChan) {
-      try { broadcastChan.postMessage(pkt); } catch (_) {}
-    }
-
-    const provider = backendConfig.provider;
-    if (provider === 'builtin' && activeSocket && activeSocket.readyState === 1) {
-      try {
-        const topic = 'javiergalilea/pr_tracks/' + currentRoom;
-        activeSocket.send(buildMqttPublish(topic, JSON.stringify(pkt)));
-      } catch (_) {}
-    } else if (provider === 'supabase' && activeSocket && activeSocket.readyState === 1) {
-      activeSocket.send(
-        JSON.stringify({
-          topic: 'realtime:tracks_' + currentRoom,
-          event: 'broadcast',
-          payload: { type: 'broadcast', event: 'pos', payload: pkt },
-          ref: String(now)
-        })
-      );
-    } else if (provider === 'custom_ws' && activeSocket && activeSocket.readyState === 1) {
-      activeSocket.send(JSON.stringify(pkt));
-    } else if (provider === 'firebase' && backendConfig.fbUrl) {
-      const baseUrl = backendConfig.fbUrl.replace(/\/+$/, '');
-      const authParam = backendConfig.fbSecret
-        ? '?auth=' + encodeURIComponent(backendConfig.fbSecret)
-        : '';
-      fetch(
-        `${baseUrl}/rooms/${encodeURIComponent(currentRoom)}/users/${encodeURIComponent(localUser.id + '_' + localUser.uid)}.json${authParam}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(pkt)
-        }
-      ).catch(function () {});
-    }
+    sendRawPacket(buildStatePacket());
   }
 
-  // --- 8. CONTROLES DE TECLADO Y MODOS DE MOVIMIENTO ---
+  // Heartbeat periódico para que los usuarios dados de alta mantengan presencia viva en la sala
+  setInterval(function () {
+    if (localUser.isRegistered) {
+      broadcastPosition(true);
+    }
+  }, 3500);
+
+  window.addEventListener('beforeunload', function () {
+    if (localUser.isRegistered) {
+      sendLeavePacket();
+    }
+  });
+
+  // --- 8. CONTROLES DE TECLADO Y MODOS DE POSICIÓN ---
   const keysPressed = { up: false, down: false, left: false, right: false };
 
   window.addEventListener('keydown', function (e) {
@@ -646,6 +762,7 @@
     if (e.key === 'Escape') {
       document.body.classList.remove('clean-mode');
       document.getElementById('backendModal').classList.add('hidden');
+      registerModal.classList.add('hidden');
       return;
     }
     const k = e.key.toLowerCase();
@@ -669,7 +786,7 @@
       btn.classList.toggle('active', btn.dataset.mode === mode);
     });
 
-    if (mode === 'gps') {
+    if (mode === 'gps' && localUser.isRegistered) {
       startRealGps();
     } else {
       stopRealGps();
@@ -678,33 +795,43 @@
 
   function startRealGps() {
     if (!navigator.geolocation) {
-      setMoveMode('autopilot');
+      setMoveMode('manual');
       return;
     }
+    stopRealGps();
     gpsBtn.classList.add('active');
+    let firstFix = true;
+
     gpsWatchId = navigator.geolocation.watchPosition(
       function (pos) {
+        if (!localUser.isRegistered) return;
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         const prevLat = localUser.lat;
         const prevLon = localUser.lon;
         localUser.lat = lat;
         localUser.lon = lon;
-        if (pos.coords.speed !== null && !isNaN(pos.coords.speed)) {
-          localUser.speed = pos.coords.speed * 3.6;
+
+        if (firstFix) {
+          firstFix = false;
+          localUser.trail = [{ lat, lon, ts: Date.now() }];
+          centerLat = lat;
+          centerLon = lon;
+          if (map) map.flyTo([lat, lon], 16, { duration: 0.8 });
         } else {
-          const d = haversineMeters(prevLat, prevLon, lat, lon);
-          localUser.speed = Math.min(160, d * 3.6);
+          if (pos.coords.speed !== null && !isNaN(pos.coords.speed)) {
+            localUser.speed = pos.coords.speed * 3.6;
+          } else {
+            const d = haversineMeters(prevLat, prevLon, lat, lon);
+            localUser.speed = Math.min(160, d * 3.6);
+          }
+          appendTrackPoint(localUser, lat, lon, 1.5);
         }
-        appendTrackPoint(localUser, lat, lon, 1.5);
-        centerLat = lat;
-        centerLon = lon;
-        if (map) map.panTo([lat, lon], { animate: true });
-        broadcastPosition();
+        broadcastPosition(true);
       },
       function () {
         gpsBtn.classList.remove('active');
-        setMoveMode('autopilot');
+        setMoveMode('manual');
       },
       { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
     );
@@ -726,141 +853,90 @@
     return Math.round(meters) + ' m';
   }
 
-  function updateSimulation(dt, nowSec) {
+  function updateSimulation(dt) {
     const t0 = performance.now();
 
-    // 1. Movimiento del usuario local
-    const stepDeg = 0.00045 * dt * 60;
-    let movedByKeys = false;
-    let dLat = 0;
-    let dLon = 0;
+    if (localUser.isRegistered) {
+      const stepDeg = 0.00045 * dt * 60;
+      let movedByKeys = false;
+      let dLat = 0;
+      let dLon = 0;
 
-    if (keysPressed.up) { dLat += stepDeg; movedByKeys = true; }
-    if (keysPressed.down) { dLat -= stepDeg; movedByKeys = true; }
-    if (keysPressed.left) { dLon -= stepDeg * 1.25; movedByKeys = true; }
-    if (keysPressed.right) { dLon += stepDeg * 1.25; movedByKeys = true; }
+      if (keysPressed.up) { dLat += stepDeg; movedByKeys = true; }
+      if (keysPressed.down) { dLat -= stepDeg; movedByKeys = true; }
+      if (keysPressed.left) { dLon -= stepDeg * 1.25; movedByKeys = true; }
+      if (keysPressed.right) { dLon += stepDeg * 1.25; movedByKeys = true; }
 
-    if (movedByKeys) {
-      localUser.targetLat = null;
-      localUser.targetLon = null;
-      const nextLat = localUser.lat + dLat;
-      const nextLon = localUser.lon + dLon;
-      const dist = haversineMeters(localUser.lat, localUser.lon, nextLat, nextLon);
-      localUser.heading = computeBearing(localUser.lat, localUser.lon, nextLat, nextLon);
-      localUser.speed = (dist / Math.max(0.008, dt)) * 3.6;
-      localUser.lat = nextLat;
-      localUser.lon = nextLon;
-      appendTrackPoint(localUser, nextLat, nextLon, 2.0);
-      broadcastPosition();
-    } else if (moveMode === 'manual' && localUser.targetLat !== null && localUser.targetLon !== null) {
-      const distToTarget = haversineMeters(
-        localUser.lat,
-        localUser.lon,
-        localUser.targetLat,
-        localUser.targetLon
-      );
-      if (distToTarget > 3.5) {
-        const moveRatio = Math.min(1, (dt * 120) / Math.max(15, distToTarget));
-        const nextLat = localUser.lat + (localUser.targetLat - localUser.lat) * moveRatio;
-        const nextLon = localUser.lon + (localUser.targetLon - localUser.lon) * moveRatio;
-        const stepM = haversineMeters(localUser.lat, localUser.lon, nextLat, nextLon);
+      if (movedByKeys) {
+        localUser.targetLat = null;
+        localUser.targetLon = null;
+        const nextLat = localUser.lat + dLat;
+        const nextLon = localUser.lon + dLon;
+        const dist = haversineMeters(localUser.lat, localUser.lon, nextLat, nextLon);
         localUser.heading = computeBearing(localUser.lat, localUser.lon, nextLat, nextLon);
-        localUser.speed = Math.min(120, (stepM / Math.max(0.008, dt)) * 3.6);
+        localUser.speed = (dist / Math.max(0.008, dt)) * 3.6;
         localUser.lat = nextLat;
         localUser.lon = nextLon;
         appendTrackPoint(localUser, nextLat, nextLon, 2.0);
         broadcastPosition();
-      } else {
-        localUser.targetLat = null;
-        localUser.targetLon = null;
-        localUser.speed *= 0.8;
-      }
-    } else if (moveMode === 'autopilot') {
-      const angle = nowSec * 0.42;
-      const r = 0.0038;
-      const nextLat = centerLat + Math.sin(angle) * r + Math.cos(angle * 2.1) * 0.0012;
-      const nextLon = centerLon + Math.cos(angle) * r * 1.3;
-      const stepM = haversineMeters(localUser.lat, localUser.lon, nextLat, nextLon);
-      localUser.heading = computeBearing(localUser.lat, localUser.lon, nextLat, nextLon);
-      localUser.speed = Math.min(95, (stepM / Math.max(0.008, dt)) * 3.6);
-      localUser.lat = nextLat;
-      localUser.lon = nextLon;
-      appendTrackPoint(localUser, nextLat, nextLon, 2.5);
-      broadcastPosition();
-    } else {
-      localUser.speed *= 0.9;
-    }
-
-    // 2. Actualizar bots de 3 letras mediante el motor Rust WebAssembly
-    if (activeBots.length > 0) {
-      if (wasmExports && wasmMemory && agentsPtr) {
-        wasmExports.step_sim_agents(
-          activeBots.length,
-          centerLat,
-          centerLon,
-          0.0085,
-          dt,
-          nowSec,
-          0
+      } else if (moveMode === 'manual' && localUser.targetLat !== null && localUser.targetLon !== null) {
+        const distToTarget = haversineMeters(
+          localUser.lat,
+          localUser.lon,
+          localUser.targetLat,
+          localUser.targetLon
         );
-        const view = new Float32Array(wasmMemory.buffer, agentsPtr, MAX_AGENTS * 8);
-        for (let i = 0; i < activeBots.length; i++) {
-          const b = activeBots[i];
-          const base = i * 8;
-          const nLat = view[base];
-          const nLon = view[base + 1];
-          b.lat = nLat;
-          b.lon = nLon;
-          b.heading = view[base + 4];
-          b.speed = view[base + 5];
-          appendTrackPoint(b, nLat, nLon, 3.0);
+        if (distToTarget > 3.5) {
+          const moveRatio = Math.min(1, (dt * 120) / Math.max(15, distToTarget));
+          const nextLat = localUser.lat + (localUser.targetLat - localUser.lat) * moveRatio;
+          const nextLon = localUser.lon + (localUser.targetLon - localUser.lon) * moveRatio;
+          const stepM = haversineMeters(localUser.lat, localUser.lon, nextLat, nextLon);
+          localUser.heading = computeBearing(localUser.lat, localUser.lon, nextLat, nextLon);
+          localUser.speed = Math.min(120, (stepM / Math.max(0.008, dt)) * 3.6);
+          localUser.lat = nextLat;
+          localUser.lon = nextLon;
+          appendTrackPoint(localUser, nextLat, nextLon, 2.0);
+          broadcastPosition();
+        } else {
+          localUser.targetLat = null;
+          localUser.targetLon = null;
+          localUser.speed *= 0.8;
         }
       } else {
-        // Fallback cinemático si WASM aún está cargando
-        for (let i = 0; i < activeBots.length; i++) {
-          const b = activeBots[i];
-          b.phase += dt * (0.28 + i * 0.07);
-          const r = 0.0035 + (i % 4) * 0.0015;
-          const nLat = centerLat + Math.sin(b.phase) * r;
-          const nLon = centerLon + Math.cos(b.phase * 0.9) * r * 1.25;
-          b.lat = nLat;
-          b.lon = nLon;
-          b.speed = 18 + (i % 4) * 4;
-          appendTrackPoint(b, nLat, nLon, 3.0);
-        }
+        localUser.speed *= 0.9;
       }
-    }
 
-    // 3. Analizar track del usuario local en el buffer WASM
-    if (wasmExports && wasmMemory && trackPointsPtr && localUser.trail.length > 1) {
-      const count = Math.min(MAX_TRACK_POINTS, localUser.trail.length);
-      const tView = new Float32Array(wasmMemory.buffer, trackPointsPtr, count * 4);
-      for (let i = 0; i < count; i++) {
-        const pt = localUser.trail[i];
-        tView[i * 4] = pt.lat;
-        tView[i * 4 + 1] = pt.lon;
-        tView[i * 4 + 2] = pt.ts * 0.001;
+      // Analizar track del usuario local en el motor Rust WASM
+      if (wasmExports && wasmMemory && trackPointsPtr && localUser.trail.length > 1) {
+        const count = Math.min(MAX_TRACK_POINTS, localUser.trail.length);
+        const tView = new Float32Array(wasmMemory.buffer, trackPointsPtr, count * 4);
+        for (let i = 0; i < count; i++) {
+          const pt = localUser.trail[i];
+          tView[i * 4] = pt.lat;
+          tView[i * 4 + 1] = pt.lon;
+          tView[i * 4 + 2] = pt.ts * 0.001;
+        }
+        wasmExports.analyze_track(count);
       }
-      wasmExports.analyze_track(count);
     }
 
     lastWasmMs = performance.now() - t0;
   }
 
-  // --- 10. RENDERIZADO DEL LIENZO TÁCTICO Y TRACKS NEÓN ---
-  function getAllActiveUsers() {
+  // --- 10. RENDERIZADO DEL LIENZO TÁCTICO Y TRACKS NEÓN (SOLO DADOS DE ALTA) ---
+  function getAllRegisteredUsers() {
     const now = Date.now();
-    const list = [localUser];
+    const list = [];
+    if (localUser.isRegistered) {
+      list.push(localUser);
+    }
     remoteUsers.forEach(function (u, key) {
-      if (now - u.lastSeen < 120000) {
+      if (now - u.lastSeen < 60000) {
         list.push(u);
       } else {
         remoteUsers.delete(key);
       }
     });
-    for (let i = 0; i < activeBots.length; i++) {
-      list.push(activeBots[i]);
-    }
     return list;
   }
 
@@ -870,62 +946,36 @@
     ctx.clearRect(0, 0, w, h);
 
     const nowSec = nowMs * 0.001;
-    const meScreen = latLonToScreen(localUser.lat, localUser.lon);
+    const users = getAllRegisteredUsers();
 
-    // 1. Rejilla táctica sutil y anillos de radar alrededor del usuario local
-    ctx.save();
-    ctx.strokeStyle = mapStyle === 'grid' ? 'rgba(0, 245, 212, 0.12)' : 'rgba(0, 245, 212, 0.045)';
-    ctx.lineWidth = 1;
-    const gridStep = 90;
-    for (let x = (meScreen.x % gridStep + gridStep) % gridStep; x < w; x += gridStep) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
+    // Si estamos en modo Radar Puro o hay un usuario local dado de alta, dibujar rejilla sutil
+    if (mapStyle === 'grid' || localUser.isRegistered) {
+      const refPt = localUser.isRegistered
+        ? latLonToScreen(localUser.lat, localUser.lon)
+        : { x: w * 0.5, y: h * 0.5 };
+
+      ctx.save();
+      ctx.strokeStyle = mapStyle === 'grid' ? 'rgba(0, 245, 212, 0.12)' : 'rgba(0, 245, 212, 0.04)';
+      ctx.lineWidth = 1;
+      const gridStep = 90;
+      for (let x = (refPt.x % gridStep + gridStep) % gridStep; x < w; x += gridStep) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = (refPt.y % gridStep + gridStep) % gridStep; y < h; y += gridStep) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
-    for (let y = (meScreen.y % gridStep + gridStep) % gridStep; y < h; y += gridStep) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
 
-    // Anillos concéntricos de alcance centrados en el usuario local
-    const rings = [95, 190, 310];
-    ctx.strokeStyle = 'rgba(0, 245, 212, 0.09)';
-    ctx.setLineDash([4, 6]);
-    for (let r of rings) {
-      ctx.beginPath();
-      ctx.arc(meScreen.x, meScreen.y, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.setLineDash([]);
-
-    // Barrido de radar sutil
-    const sweepAngle = (nowSec * 0.9) % (Math.PI * 2);
-    const sweepGrad = ctx.createLinearGradient(
-      meScreen.x,
-      meScreen.y,
-      meScreen.x + Math.cos(sweepAngle) * 260,
-      meScreen.y + Math.sin(sweepAngle) * 260
-    );
-    sweepGrad.addColorStop(0, 'rgba(0, 245, 212, 0.22)');
-    sweepGrad.addColorStop(1, 'rgba(0, 245, 212, 0)');
-    ctx.strokeStyle = sweepGrad;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(meScreen.x, meScreen.y);
-    ctx.lineTo(
-      meScreen.x + Math.cos(sweepAngle) * 260,
-      meScreen.y + Math.sin(sweepAngle) * 260
-    );
-    ctx.stroke();
-    ctx.restore();
-
-    const users = getAllActiveUsers();
     let totalPoints = 0;
 
-    // 2. Pintar el track (estela luminosa) de cada usuario
+    // 1. Pintar el track (estela luminosa) de cada usuario dado de alta
     for (const u of users) {
       const trail = u.trail;
       totalPoints += trail.length;
@@ -933,15 +983,14 @@
 
       const screenPts = trail.map(p => latLonToScreen(p.lat, p.lon));
 
-      // Capa exterior de resplandor neón
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = u.color;
       ctx.shadowColor = u.color;
       ctx.shadowBlur = 14;
-      ctx.globalAlpha = u.isLocal ? 0.42 : 0.3;
-      ctx.lineWidth = u.isLocal ? 7 : 5;
+      ctx.globalAlpha = u.isLocal ? 0.45 : 0.35;
+      ctx.lineWidth = u.isLocal ? 7 : 5.5;
       ctx.beginPath();
       for (let i = 0; i < screenPts.length; i++) {
         if (i === 0) ctx.moveTo(screenPts[i].x, screenPts[i].y);
@@ -951,16 +1000,16 @@
 
       // Núcleo nítido del track
       ctx.shadowBlur = 4;
-      ctx.globalAlpha = u.isLocal ? 0.95 : 0.82;
-      ctx.lineWidth = u.isLocal ? 2.8 : 2.2;
+      ctx.globalAlpha = u.isLocal ? 0.95 : 0.88;
+      ctx.lineWidth = u.isLocal ? 2.8 : 2.4;
       ctx.stroke();
 
-      // Punto de origen del track
+      // Punto de inicio del track
       const startPt = screenPts[0];
       ctx.fillStyle = u.color;
-      ctx.globalAlpha = 0.65;
+      ctx.globalAlpha = 0.75;
       ctx.beginPath();
-      ctx.arc(startPt.x, startPt.y, 3.2, 0, Math.PI * 2);
+      ctx.arc(startPt.x, startPt.y, 3.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Pulso de energía viajando por el track
@@ -982,8 +1031,9 @@
       ctx.restore();
     }
 
-    // 3. Si el usuario local tiene un destino marcado con click, dibujar línea guía
-    if (moveMode === 'manual' && localUser.targetLat !== null && localUser.targetLon !== null) {
+    // 2. Si el usuario local tiene un destino marcado con click, dibujar línea guía
+    if (localUser.isRegistered && moveMode === 'manual' && localUser.targetLat !== null && localUser.targetLon !== null) {
+      const meScreen = latLonToScreen(localUser.lat, localUser.lon);
       const targetScreen = latLonToScreen(localUser.targetLat, localUser.targetLon);
       ctx.save();
       ctx.setLineDash([5, 5]);
@@ -1002,7 +1052,7 @@
       ctx.restore();
     }
 
-    // 4. Pintar la baliza actual y la etiqueta de 3 LETRAS de cada usuario
+    // 3. Pintar la baliza actual y la etiqueta de 3 LETRAS de cada usuario dado de alta
     for (const u of users) {
       const pos = latLonToScreen(u.lat, u.lon);
       const radHeading = ((u.heading - 90) * Math.PI) / 180;
@@ -1040,7 +1090,7 @@
       ctx.fillStyle = u.color;
       ctx.globalAlpha = 1;
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, u.isLocal ? 6.5 : 5.2, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, u.isLocal ? 6.5 : 5.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#05070c';
@@ -1048,7 +1098,7 @@
       ctx.arc(pos.x, pos.y, 2.3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Etiqueta táctica con las 3 letras (ej. [JGG]) + telemetría
+      // Etiqueta táctica con las 3 letras (ej. [JGG])
       const labelY = pos.y - 24;
       const badgeW = 48;
       const badgeH = 20;
@@ -1056,9 +1106,9 @@
 
       ctx.shadowBlur = 10;
       ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
-      ctx.fillStyle = 'rgba(8, 12, 21, 0.9)';
+      ctx.fillStyle = 'rgba(8, 12, 21, 0.92)';
       ctx.strokeStyle = u.color;
-      ctx.lineWidth = u.isLocal ? 1.8 : 1.2;
+      ctx.lineWidth = u.isLocal ? 1.8 : 1.4;
       ctx.beginPath();
       ctx.roundRect(badgeX, labelY - badgeH * 0.5, badgeW, badgeH, 6);
       ctx.fill();
@@ -1071,9 +1121,8 @@
       ctx.textBaseline = 'middle';
       ctx.fillText(u.id, pos.x, labelY + 0.5);
 
-      // Sub-etiqueta de distancia recorrida
       if (u.totalDistM > 5) {
-        ctx.fillStyle = 'rgba(226, 232, 240, 0.85)';
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.88)';
         ctx.font = '600 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         ctx.fillText(formatDistance(u.totalDistM), pos.x, labelY - 15);
       }
@@ -1088,16 +1137,24 @@
     if (wasmTimeEl) wasmTimeEl.textContent = lastWasmMs.toFixed(2);
   }
 
-  // --- 11. ACTUALIZAR PANEL LATERAL DE USUARIOS (ROSTER) ---
+  // --- 11. ACTUALIZAR PANEL LATERAL DE USUARIOS DADOS DE ALTA ---
   function renderRoster() {
     if (!rosterList) return;
-    const users = getAllActiveUsers();
+    const users = getAllRegisteredUsers();
     rosterList.innerHTML = '';
+
+    if (users.length === 0) {
+      const emptyLi = document.createElement('li');
+      emptyLi.className = 'roster-empty';
+      emptyLi.innerHTML = 'Ningún usuario dado de alta en esta sala.<br>Pulsa <strong>«➕ Darme de Alta»</strong> para entrar con tus 3 letras.';
+      rosterList.appendChild(emptyLi);
+      return;
+    }
 
     for (const u of users) {
       const li = document.createElement('li');
       li.className = 'roster-item' + (u.isLocal ? ' is-me' : '');
-      const roleTag = u.isLocal ? 'Tú (En vivo)' : u.isBot ? 'Bot WASM' : 'Remoto';
+      const roleTag = u.isLocal ? 'Tú (Dado de alta)' : 'Usuario en vivo';
 
       li.innerHTML = `
         <div class="roster-user-left">
@@ -1125,14 +1182,14 @@
 
   // --- 12. EXPORTACIÓN DE TRACKS A GPX ---
   function exportTracksToGpx() {
-    const users = getAllActiveUsers();
+    const users = getAllRegisteredUsers();
     const isoNow = new Date().toISOString();
     let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n`;
     gpx += `<gpx version="1.1" creator="javiergalilea.es/pr_tracks" xmlns="http://www.topografix.com/GPX/1/1">\n`;
     gpx += `  <metadata><name>Tracks Sala ${currentRoom}</name><time>${isoNow}</time></metadata>\n`;
 
     for (const u of users) {
-      gpx += `  <trk>\n    <name>${u.id} (${u.isLocal ? 'Local' : u.isBot ? 'Bot' : 'Remoto'})</name>\n    <trkseg>\n`;
+      gpx += `  <trk>\n    <name>${u.id}</name>\n    <trkseg>\n`;
       for (const pt of u.trail) {
         const t = new Date(pt.ts).toISOString();
         gpx += `      <trkpt lat="${pt.lat.toFixed(6)}" lon="${pt.lon.toFixed(6)}"><time>${t}</time></trkpt>\n`;
@@ -1145,48 +1202,110 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tracks_${currentRoom}_${localUser.id}.gpx`;
+    a.download = `tracks_${currentRoom}_${localUser.id || 'sala'}.gpx`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  // --- 13. EVENTOS DE INTERFAZ Y MODAL DE BACKEND ---
+  // --- 13. EVENTOS DE INTERFAZ Y MODALES ---
   function bindUiEvents() {
-    // Inicializar valores en inputs
-    callsignInput.value = localUser.id;
-    callsignPreview.textContent = localUser.id;
+    let regSelectedColor = localUser.color;
+    let regSelectedMode = 'gps';
+
+    // Inicializar campos del modal de Alta
+    regCallsignInput.value = savedCallsign || '';
+    regRoomInput.value = currentRoom;
     roomInput.value = currentRoom;
     roomBadge.textContent = currentRoom;
 
+    regCallsignInput.addEventListener('input', function () {
+      regCallsignInput.value = regCallsignInput.value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '')
+        .slice(0, 3);
+    });
+
+    document.querySelectorAll('.reg-swatch-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.color === regSelectedColor);
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.reg-swatch-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        regSelectedColor = btn.dataset.color;
+      });
+    });
+
+    document.querySelectorAll('.reg-mode-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.reg-mode-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        regSelectedMode = btn.dataset.mode;
+      });
+    });
+
+    registerForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      registerLocalUser(
+        regCallsignInput.value,
+        regSelectedColor,
+        regRoomInput.value,
+        regSelectedMode
+      );
+    });
+
+    document.getElementById('closeRegisterBtn').addEventListener('click', function () {
+      registerModal.classList.add('hidden');
+    });
+
+    document.getElementById('watchOnlyBtn').addEventListener('click', function () {
+      registerModal.classList.add('hidden');
+    });
+
+    registerTopBtn.addEventListener('click', function () {
+      regCallsignInput.value = localUser.isRegistered ? localUser.id : (savedCallsign || '');
+      regRoomInput.value = currentRoom;
+      registerModal.classList.remove('hidden');
+      regCallsignInput.focus();
+    });
+
+    leaveRoomBtn.addEventListener('click', function () {
+      unregisterLocalUser();
+    });
+
+    // Swatches de color del dock inferior
     document.querySelectorAll('.swatch-btn').forEach(function (btn) {
       btn.classList.toggle('active', btn.dataset.color === localUser.color);
       btn.addEventListener('click', function () {
         document.querySelectorAll('.swatch-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         localUser.color = btn.dataset.color;
+        regSelectedColor = localUser.color;
         localStorage.setItem('jg_tracks_color', localUser.color);
-        broadcastPosition(true);
-        renderRoster();
+        if (localUser.isRegistered) {
+          broadcastPosition(true);
+          renderRoster();
+        }
       });
     });
 
+    // Input de 3 letras en el dock inferior
     callsignInput.addEventListener('input', function () {
       const cleaned = callsignInput.value
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, '')
         .slice(0, 3);
       callsignInput.value = cleaned;
-      if (cleaned.length > 0) {
-        localUser.id = cleaned.padEnd(3, 'X');
-        callsignPreview.textContent = localUser.id;
-        localStorage.setItem('jg_tracks_callsign', localUser.id);
-        broadcastPosition(true);
-        renderRoster();
+      if (cleaned.length === 3) {
+        if (!localUser.isRegistered) {
+          registerLocalUser(cleaned, localUser.color, currentRoom, moveMode);
+        } else {
+          localUser.id = cleaned;
+          callsignPreview.textContent = localUser.id;
+          registerTopBtnLabel.textContent = '🟢 Alta: ' + localUser.id;
+          localStorage.setItem('jg_tracks_callsign', localUser.id);
+          broadcastPosition(true);
+          renderRoster();
+        }
       }
-    });
-
-    callsignInput.addEventListener('blur', function () {
-      callsignInput.value = localUser.id;
     });
 
     function applyRoomChange() {
@@ -1194,6 +1313,9 @@
         .toUpperCase()
         .replace(/[^A-Z0-9-_]/g, '')
         .slice(0, 14) || 'SALA-JG1';
+      if (localUser.isRegistered && cleaned !== currentRoom) {
+        sendLeavePacket();
+      }
       roomInput.value = cleaned;
       currentRoom = cleaned;
       roomBadge.textContent = currentRoom;
@@ -1208,7 +1330,7 @@
       if (e.key === 'Enter') applyRoomChange();
     });
 
-    // Modos de movimiento
+    // Modos de posición
     document.querySelectorAll('.mode-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         setMoveMode(btn.dataset.mode);
@@ -1216,6 +1338,10 @@
     });
 
     gpsBtn.addEventListener('click', function () {
+      if (!localUser.isRegistered) {
+        registerModal.classList.remove('hidden');
+        return;
+      }
       if (moveMode === 'gps') {
         setMoveMode('manual');
       } else {
@@ -1232,7 +1358,7 @@
       });
     });
 
-    // Saltos rápidos de ciudad
+    // Saltos rápidos de vista de ciudad
     document.querySelectorAll('.city-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
@@ -1241,19 +1367,7 @@
         const lon = parseFloat(btn.dataset.lon);
         centerLat = lat;
         centerLon = lon;
-        localUser.lat = lat;
-        localUser.lon = lon;
-        localUser.targetLat = null;
-        localUser.targetLon = null;
-        localUser.trail = [{ lat, lon, ts: Date.now() }];
-        localUser.totalDistM = 0;
-
-        const currentBots = activeBots.length;
-        activeBots.length = 0;
-        syncBotCount(currentBots);
-
         if (map) map.flyTo([lat, lon], 15, { duration: 0.9 });
-        broadcastPosition(true);
       });
     });
 
@@ -1263,16 +1377,12 @@
       trailLabel.textContent = maxTrailPoints + ' pts';
     });
 
-    // Botones de bots (+ Bot / - Bot)
-    document.getElementById('addBotBtn').addEventListener('click', function () {
-      syncBotCount(activeBots.length + 1);
-    });
-    document.getElementById('removeBotBtn').addEventListener('click', function () {
-      syncBotCount(activeBots.length - 1);
-    });
-
     // Centrar en mí e Invitar
     document.getElementById('centerMeBtn').addEventListener('click', function () {
+      if (!localUser.isRegistered) {
+        registerModal.classList.remove('hidden');
+        return;
+      }
       if (map) map.flyTo([localUser.lat, localUser.lon], 16, { duration: 0.6 });
     });
 
@@ -1289,12 +1399,11 @@
 
     // Limpiar tracks y Exportar GPX
     document.getElementById('clearTracksBtn').addEventListener('click', function () {
-      localUser.trail = [{ lat: localUser.lat, lon: localUser.lon, ts: Date.now() }];
-      localUser.totalDistM = 0;
-      activeBots.forEach(function (b) {
-        b.trail = [{ lat: b.lat, lon: b.lon, ts: Date.now() }];
-        b.totalDistM = 0;
-      });
+      if (localUser.isRegistered) {
+        localUser.trail = [{ lat: localUser.lat, lon: localUser.lon, ts: Date.now() }];
+        localUser.totalDistM = 0;
+        broadcastPosition(true);
+      }
       remoteUsers.forEach(function (u) {
         u.trail = [{ lat: u.lat, lon: u.lon, ts: Date.now() }];
         u.totalDistM = 0;
@@ -1410,7 +1519,6 @@
       const { instance } = await WebAssembly.instantiate(bytes, {});
       wasmExports = instance.exports;
       wasmMemory = wasmExports.memory;
-      agentsPtr = wasmExports.get_agents_ptr();
       trackPointsPtr = wasmExports.get_track_points_ptr();
     } catch (_) {
       wasmExports = null;
@@ -1424,10 +1532,10 @@
     const dt = Math.min(0.1, (now - lastFrameTime) * 0.001);
     lastFrameTime = now;
 
-    updateSimulation(dt, now * 0.001);
+    updateSimulation(dt);
     renderCanvas(now);
 
-    if (now - lastRosterUpdate > 450) {
+    if (now - lastRosterUpdate > 600) {
       lastRosterUpdate = now;
       renderRoster();
     }
@@ -1435,12 +1543,12 @@
     requestAnimationFrame(mainLoop);
   }
 
-  // Inicialización general
+  // Inicialización general (0 demos, solo altas reales)
   resizeCanvas();
   initMap();
   bindUiEvents();
+  renderRoster();
   loadWasmEngine().then(function () {
-    syncBotCount(3);
     connectRealtimeBackend();
     requestAnimationFrame(mainLoop);
   });

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Radar & Tracks Multiusuario (3 Letras) — Javier Galilea</title>
-  <meta name="description" content="Mapa interactivo en tiempo real donde varios usuarios identificados con 3 letras comparten su posición GPS y pintan su track luminoso con motor geodésico en Rust y WebAssembly.">
+  <meta name="description" content="Mapa interactivo en tiempo real donde los usuarios dados de alta con 3 letras comparten su posición GPS y pintan su track luminoso con motor geodésico en Rust y WebAssembly.">
   <link rel="canonical" href="https://javiergalilea.es/pr_tracks/">
   <meta name="theme-color" content="#05070c">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
@@ -38,12 +38,15 @@
           <span class="status-dot online" id="netStatusDot"></span>
           <strong id="netProviderLabel">LIVE</strong>
         </span>
-        <span class="stat-pill"><strong id="userCount">1</strong> usuarios</span>
+        <span class="stat-pill"><strong id="userCount">0</strong> dados de alta</span>
         <span class="stat-pill"><strong id="pointCount">0</strong> pts</span>
         <span class="stat-pill"><strong id="myDistStat">0 m</strong></span>
-        <span class="stat-pill"><strong id="wasmTime">0.06</strong> ms</span>
+        <span class="stat-pill"><strong id="wasmTime">0.04</strong> ms</span>
       </div>
 
+      <button id="registerTopBtn" class="action-pill-btn" title="Darse de alta o gestionar tu usuario de 3 letras">
+        <span id="registerTopBtnLabel">➕ Darme de Alta</span>
+      </button>
       <button id="gpsBtn" class="action-pill-btn gps-pill" title="Activar geolocalización GPS real del dispositivo">
         <span>📍 GPS Real</span>
       </button>
@@ -86,24 +89,23 @@
 
   <!-- Indicador de Interacción -->
   <div class="canvas-hint" id="canvasHint">
-    🛰️ Haz clic en el mapa o usa WASD/Flechas para mover tu baliza 3 letras · Activa «GPS Real» en el móvil · Comparte el código de sala
+    🛰️ Solo aparecen en el mapa los usuarios dados de alta · Pulsa «Darme de Alta» con tus 3 letras para compartir tu posición
   </div>
 
-  <!-- Panel Lateral de Usuarios Activos (3 Letras) -->
-  <aside class="roster-panel" id="rosterPanel" aria-label="Usuarios activos en el mapa">
+  <!-- Panel Lateral de Usuarios Dados de Alta (3 Letras) -->
+  <aside class="roster-panel" id="rosterPanel" aria-label="Usuarios dados de alta en el mapa">
     <div class="roster-header">
       <div class="roster-title">
         <span class="pulse-dot"></span>
-        <span>RADAR · 3 LETRAS</span>
+        <span>USUARIOS EN SALA</span>
       </div>
       <div class="roster-actions">
-        <button id="addBotBtn" class="mini-btn" title="Añadir usuario simulado con código de 3 letras">+ Bot</button>
-        <button id="removeBotBtn" class="mini-btn" title="Quitar un usuario simulado">− Bot</button>
+        <button id="leaveRoomBtn" class="mini-btn danger-btn hidden" title="Dar de baja mi usuario del mapa">Salir</button>
       </div>
     </div>
     <ul class="roster-list" id="rosterList"></ul>
     <div class="roster-footer">
-      <button id="centerMeBtn" class="roster-ActionBtn" title="Centrar cámara en mi posición">🎯 Centrar en mí</button>
+      <button id="centerMeBtn" class="roster-ActionBtn" title="Centrar cámara en mi posición">🎯 Mi posición</button>
       <button id="shareRoomBtn" class="roster-ActionBtn" title="Copiar enlace directo a esta sala">🔗 Invitar</button>
     </div>
   </aside>
@@ -115,10 +117,10 @@
       <div class="control-group identity-group">
         <label for="callsignInput">
           <span>Tu ID (3 Letras)</span>
-          <strong id="callsignPreview">JGG</strong>
+          <strong id="callsignPreview">---</strong>
         </label>
         <div class="identity-row">
-          <input type="text" id="callsignInput" maxlength="3" value="JGG" spellcheck="false" autocomplete="off" aria-label="Código de usuario de 3 letras">
+          <input type="text" id="callsignInput" maxlength="3" placeholder="JGG" value="" spellcheck="false" autocomplete="off" aria-label="Código de usuario de 3 letras">
           <div class="color-swatches" id="colorSwatches" role="radiogroup" aria-label="Color de tu track">
             <button type="button" class="swatch-btn active" data-color="#00f5d4" style="--sw:#00f5d4" title="Cian Cyber"></button>
             <button type="button" class="swatch-btn" data-color="#3b82f6" style="--sw:#3b82f6" title="Azul Eléctrico"></button>
@@ -138,17 +140,16 @@
         </label>
         <div class="room-row">
           <input type="text" id="roomInput" maxlength="14" value="SALA-JG1" spellcheck="false" autocomplete="off" aria-label="Código de sala">
-          <button type="button" id="joinRoomBtn" class="room-apply-btn" title="Cambiar de sala">Unirse</button>
+          <button type="button" id="joinRoomBtn" class="room-apply-btn" title="Cambiar de sala">Cambiar</button>
         </div>
       </div>
 
       <!-- Modo de Posicionamiento -->
       <div class="control-group">
-        <label>Control de Posición</label>
+        <label>Origen de Posición</label>
         <div class="button-toggle-group">
-          <button type="button" class="mode-btn active" data-mode="manual" title="Haz clic en el mapa o usa las flechas/WASD para desplazarte">Click / Teclas</button>
-          <button type="button" class="mode-btn" data-mode="autopilot" title="Desplazamiento orbital automático pintando tu track">Piloto Auto</button>
-          <button type="button" class="mode-btn" data-mode="gps" title="Geolocalización GPS real del navegador">GPS Móvil</button>
+          <button type="button" class="mode-btn active" data-mode="gps" title="Geolocalización GPS real del navegador">📍 GPS Real</button>
+          <button type="button" class="mode-btn" data-mode="manual" title="Haz clic en el mapa o usa las flechas/WASD para desplazarte">🖱️ Click / Mapa</button>
         </div>
       </div>
 
@@ -165,12 +166,12 @@
 
       <!-- Salto Rápido de Ciudad -->
       <div class="control-group">
-        <label>Zona Activa</label>
+        <label>Vista del Mapa</label>
         <div class="button-toggle-group">
-          <button type="button" class="city-btn active" data-lat="40.4168" data-lon="-3.7038" title="Madrid — Puerta del Sol">MAD</button>
-          <button type="button" class="city-btn" data-lat="41.3874" data-lon="2.1686" title="Barcelona — Eixample">BCN</button>
-          <button type="button" class="city-btn" data-lat="43.2630" data-lon="-2.9350" title="Bilbao — Abandoibarra">BIO</button>
-          <button type="button" class="city-btn" data-lat="40.7580" data-lon="-73.9855" title="Nueva York — Manhattan">NYC</button>
+          <button type="button" class="city-btn active" data-lat="40.4168" data-lon="-3.7038" title="Madrid">MAD</button>
+          <button type="button" class="city-btn" data-lat="41.3874" data-lon="2.1686" title="Barcelona">BCN</button>
+          <button type="button" class="city-btn" data-lat="43.2630" data-lon="-2.9350" title="Bilbao">BIO</button>
+          <button type="button" class="city-btn" data-lat="40.7580" data-lon="-73.9855" title="Nueva York">NYC</button>
         </div>
       </div>
 
@@ -185,6 +186,64 @@
     </div>
   </aside>
 
+  <!-- Modal de Alta de Usuario (3 Letras) -->
+  <div class="modal-backdrop" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerModalTitle">
+    <div class="modal-card register-card">
+      <div class="modal-header">
+        <div>
+          <span class="lab-badge">REGISTRO EN SALA</span>
+          <h2 id="registerModalTitle">Alta de Usuario (3 Letras)</h2>
+        </div>
+        <button type="button" id="closeRegisterBtn" class="icon-btn" title="Solo observar el mapa sin darme de alta" aria-label="Cerrar">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Introduce tus <strong>3 letras identificativas</strong> (ej. <code>JGG</code>) para darte de alta en el mapa y compartir tu posición y tu track en tiempo real con el resto de la sala.
+      </p>
+
+      <form id="registerForm" class="register-form">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="regCallsignInput">Tus 3 Letras (A-Z / 0-9)</label>
+            <input type="text" id="regCallsignInput" class="big-callsign-input" maxlength="3" placeholder="JGG" required autocomplete="off" spellcheck="false">
+          </div>
+          <div class="form-field">
+            <label for="regRoomInput">Sala Compartida</label>
+            <input type="text" id="regRoomInput" maxlength="14" value="SALA-JG1" required autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>Color de tu Track en el Mapa</label>
+          <div class="color-swatches reg-swatches" id="regColorSwatches">
+            <button type="button" class="reg-swatch-btn active" data-color="#00f5d4" style="--sw:#00f5d4" title="Cian Cyber"></button>
+            <button type="button" class="reg-swatch-btn" data-color="#3b82f6" style="--sw:#3b82f6" title="Azul Eléctrico"></button>
+            <button type="button" class="reg-swatch-btn" data-color="#f72585" style="--sw:#f72585" title="Magenta Neón"></button>
+            <button type="button" class="reg-swatch-btn" data-color="#ffbe0b" style="--sw:#ffbe0b" title="Ámbar Solar"></button>
+            <button type="button" class="reg-swatch-btn" data-color="#a855f7" style="--sw:#a855f7" title="Violeta Orbital"></button>
+            <button type="button" class="reg-swatch-btn" data-color="#10b981" style="--sw:#10b981" title="Esmeralda"></button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>¿Cómo quieres compartir tu posición?</label>
+          <div class="button-toggle-group reg-mode-group">
+            <button type="button" class="reg-mode-btn active" data-mode="gps">📍 GPS Real del Dispositivo</button>
+            <button type="button" class="reg-mode-btn" data-mode="manual">🖱️ Posición Manual (Click / Teclas)</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <span class="modal-status" id="regFeedback">Sin usuarios simulados · Solo altas reales</span>
+          <div class="modal-btns">
+            <button type="button" id="watchOnlyBtn" class="btn-modal secondary">Solo observar</button>
+            <button type="submit" id="submitRegisterBtn" class="btn-modal primary">Darme de Alta</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal de Configuración de Backend / Base de Datos en Tiempo Real -->
   <div class="modal-backdrop hidden" id="backendModal" role="dialog" aria-modal="true" aria-labelledby="backendModalTitle">
     <div class="modal-card">
@@ -197,7 +256,7 @@
       </div>
 
       <p class="modal-desc">
-        Elige cómo se sincronizan las posiciones y los tracks de los usuarios (3 letras). Por defecto funciona sin configuración mediante <strong>WebSocket Público + BroadcastChannel</strong>, pero puedes conectarlo a tu propio <strong>Supabase</strong>, <strong>Firebase Realtime DB</strong> o <strong>Servidor WebSocket</strong>.
+        Elige cómo se sincronizan las posiciones y los tracks de los usuarios dados de alta (3 letras). Por defecto funciona sin configuración mediante <strong>WebSocket Público + BroadcastChannel</strong>, o puedes conectarlo a tu propio <strong>Supabase</strong>, <strong>Firebase Realtime DB</strong> o <strong>Servidor WebSocket</strong>.
       </p>
 
       <div class="provider-tabs" id="providerTabs">
@@ -212,8 +271,8 @@
         <div class="info-box">
           <strong>Canal Híbrido Activo de Serie:</strong>
           <ul>
-            <li>Sincroniza al instante entre pestañas locales (<code>BroadcastChannel</code>) y entre distintos dispositivos en Internet mediante relay WebSocket público cifrado por código de sala.</li>
-            <li>Abre esta misma URL en tu móvil y en tu ordenador con la misma sala (ej. <code>SALA-JG1</code>) y verás ambos códigos de 3 letras pintando su track en vivo.</li>
+            <li>Sincroniza al instante entre pestañas locales (<code>BroadcastChannel</code>) y entre distintos móviles/ordenadores en Internet mediante relay WebSocket por código de sala.</li>
+            <li>Solo aparecen en el mapa los usuarios que se dan de alta en la sala (ej. <code>SALA-JG1</code>).</li>
           </ul>
         </div>
       </div>
@@ -232,7 +291,7 @@
         </div>
         <div class="info-box">
           <strong>Sincronización vía Supabase Realtime Broadcast:</strong>
-          No requiere siquiera crear tablas SQL: utiliza los canales efímeros de baja latencia de Supabase Realtime (WebSocket Phoenix) autenticados con tu <code>anon key</code>, además de hacer upsert opcional si existe la tabla <code>tracks_positions</code>.
+          Utiliza los canales en tiempo real de Supabase Realtime (WebSocket Phoenix) autenticados con tu <code>anon key</code>.
         </div>
       </div>
 
@@ -250,7 +309,7 @@
         </div>
         <div class="info-box">
           <strong>Sincronización en `/rooms/{sala}/users/{ID_3_LETRAS}.json`:</strong>
-          Publica coordenadas por REST <code>PATCH</code> y escucha cambios en tiempo real mediante Server-Sent Events (SSE) e interrogación adaptativa.
+          Publica coordenadas por REST y escucha todos los usuarios dados de alta en la sala.
         </div>
       </div>
 

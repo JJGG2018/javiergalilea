@@ -872,6 +872,86 @@ input[type="range"] {
   color: #05070c;
 }
 
+.register-card {
+  max-width: 520px;
+}
+
+.big-callsign-input {
+  text-transform: uppercase;
+  font-size: 1.25rem !important;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-align: center;
+  color: var(--accent-cyan) !important;
+  border-color: rgba(0, 245, 212, 0.4) !important;
+}
+
+.reg-swatches {
+  gap: 0.55rem;
+  padding: 0.35rem 0;
+}
+
+.reg-swatch-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--sw);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.reg-swatch-btn.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 12px var(--sw);
+  transform: scale(1.15);
+}
+
+.reg-mode-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 0.55rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reg-mode-btn.active {
+  background: rgba(0, 245, 212, 0.18);
+  color: var(--accent-cyan);
+}
+
+.mini-btn.danger-btn {
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.12);
+}
+
+.mini-btn.danger-btn:hover {
+  border-color: #f43f5e;
+  color: #ffffff;
+  background: rgba(244, 63, 94, 0.28);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.roster-empty {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 1rem 0.5rem;
+  line-height: 1.5;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
 @media (max-width: 1220px) {
   .hud-controls {
     grid-template-columns: repeat(3, 1fr);
