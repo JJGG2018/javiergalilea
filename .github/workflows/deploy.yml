@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build-and-verify:
-    name: "🔍 Verificar 8 Proyectos, Binarios WASM y Empaquetar"
+    name: "🔍 Verificar 9 Proyectos, Binarios WASM y Empaquetar"
     runs-on: ubuntu-latest
     steps:
       - name: "📥 Descargar código fuente del repositorio"
@@ -60,6 +60,7 @@ jobs:
           check_project "06" "Reloj Cósmico & Túnel TV" "pr_reloj"
           check_project "07" "Kiosco de Noticias Dinámico" "pr_noticias"
           check_project "08" "Escultura Tipográfica 3D" "pr_letras3d"
+          check_project "09" "Radar & Tracks Multiusuario (3 Letras)" "pr_tracks"
 
       - name: "⚙️ Configurar entorno de GitHub Pages"
         uses: actions/configure-pages@v5

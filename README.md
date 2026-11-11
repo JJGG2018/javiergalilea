@@ -65,11 +65,18 @@ javiergalilea/
 │   ├── engine.wasm       # Barajado aleatorio Fisher-Yates (339 bytes)
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_letras3d/          # [Subproyecto 08: Escultura Tipográfica 3D]
-    ├── index.html        # Experiencia interactiva 3D a pantalla completa
-    ├── letras3d.css      # Interfaz y dock de controles 3D
-    ├── letras3d.js       # Rasterizado tipográfico 3D, cámara orbital y sombreado
-    ├── engine.wasm       # Motor de físicas elásticas 3D y proyección en Rust WASM
+├── pr_letras3d/          # [Subproyecto 08: Escultura Tipográfica 3D]
+│   ├── index.html        # Experiencia interactiva 3D a pantalla completa
+│   ├── letras3d.css      # Interfaz y dock de controles 3D
+│   ├── letras3d.js       # Rasterizado tipográfico 3D, cámara orbital y sombreado
+│   ├── engine.wasm       # Motor de físicas elásticas 3D y proyección en Rust WASM
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_tracks/            # [Subproyecto 09: Radar & Tracks Multiusuario (3 Letras)]
+    ├── index.html        # Mapa en tiempo real con estelas neón y HUD táctico
+    ├── tracks.css        # Estilos Cyber Dark, panel de radar y modal de backends
+    ├── tracks.js         # Sincronización híbrida (WSS, Supabase, Firebase) y GPX
+    ├── engine.wasm       # Motor geodésico Haversine y cinemática en Rust WASM
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 

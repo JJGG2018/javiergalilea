@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radar & Tracks Multiusuario (3 Letras) — Javier Galilea</title>
+  <meta name="description" content="Mapa interactivo en tiempo real donde varios usuarios identificados con 3 letras comparten su posición GPS y pintan su track luminoso con motor geodésico en Rust y WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_tracks/">
+  <meta name="theme-color" content="#05070c">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="tracks.css">
+</head>
+<body>
+  <!-- Mapa Cartográfico Real + Lienzo Sincronizado de Tracks Neón -->
+  <div id="mapContainer" aria-label="Mapa interactivo de tracks multiusuario"></div>
+  <canvas id="tracksCanvas"></canvas>
+
+  <!-- Barra Superior Flotante -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la página principal">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #09 · TELEMETRÍA GPS</span>
+        <h1>Tracks Multiusuario · 3 Letras</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill status-pill" id="netStatusPill" title="Estado del canal de sincronización en tiempo real">
+          <span class="status-dot online" id="netStatusDot"></span>
+          <strong id="netProviderLabel">LIVE</strong>
+        </span>
+        <span class="stat-pill"><strong id="userCount">1</strong> usuarios</span>
+        <span class="stat-pill"><strong id="pointCount">0</strong> pts</span>
+        <span class="stat-pill"><strong id="myDistStat">0 m</strong></span>
+        <span class="stat-pill"><strong id="wasmTime">0.06</strong> ms</span>
+      </div>
+
+      <button id="gpsBtn" class="action-pill-btn gps-pill" title="Activar geolocalización GPS real del dispositivo">
+        <span>📍 GPS Real</span>
+      </button>
+      <button id="backendBtn" class="action-pill-btn secondary-pill" title="Configurar conexión a Backend / Base de datos (Supabase, Firebase, WebSocket)">
+        <span>🔌 Backend / DB</span>
+      </button>
+      <button id="exportGpxBtn" class="action-pill-btn secondary-pill" title="Exportar todos los tracks a archivo GPX">
+        <span>📥 GPX</span>
+      </button>
+      <button id="clearTracksBtn" class="action-pill-btn secondary-pill" title="Borrar estelas pintadas en el mapa">
+        <span>⟲ Limpiar</span>
+      </button>
+
+      <button id="cleanModeBtn" class="icon-btn" title="Modo inmersivo (ocultar controles)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+      <button id="toggleHudBtn" class="icon-btn" title="Mostrar/Ocultar panel inferior">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <button id="restoreUiBtn" class="restore-ui-corner" title="Restaurar controles (ESC)" aria-label="Restaurar controles">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+    </svg>
+  </button>
+
+  <!-- Indicador de Interacción -->
+  <div class="canvas-hint" id="canvasHint">
+    🛰️ Haz clic en el mapa o usa WASD/Flechas para mover tu baliza 3 letras · Activa «GPS Real» en el móvil · Comparte el código de sala
+  </div>
+
+  <!-- Panel Lateral de Usuarios Activos (3 Letras) -->
+  <aside class="roster-panel" id="rosterPanel" aria-label="Usuarios activos en el mapa">
+    <div class="roster-header">
+      <div class="roster-title">
+        <span class="pulse-dot"></span>
+        <span>RADAR · 3 LETRAS</span>
+      </div>
+      <div class="roster-actions">
+        <button id="addBotBtn" class="mini-btn" title="Añadir usuario simulado con código de 3 letras">+ Bot</button>
+        <button id="removeBotBtn" class="mini-btn" title="Quitar un usuario simulado">− Bot</button>
+      </div>
+    </div>
+    <ul class="roster-list" id="rosterList"></ul>
+    <div class="roster-footer">
+      <button id="centerMeBtn" class="roster-ActionBtn" title="Centrar cámara en mi posición">🎯 Centrar en mí</button>
+      <button id="shareRoomBtn" class="roster-ActionBtn" title="Copiar enlace directo a esta sala">🔗 Invitar</button>
+    </div>
+  </aside>
+
+  <!-- Panel de Control Flotante (Dock Inferior) -->
+  <aside class="hud-dock" id="hudDock">
+    <div class="hud-controls">
+      <!-- Identidad 3 Letras + Color -->
+      <div class="control-group identity-group">
+        <label for="callsignInput">
+          <span>Tu ID (3 Letras)</span>
+          <strong id="callsignPreview">JGG</strong>
+        </label>
+        <div class="identity-row">
+          <input type="text" id="callsignInput" maxlength="3" value="JGG" spellcheck="false" autocomplete="off" aria-label="Código de usuario de 3 letras">
+          <div class="color-swatches" id="colorSwatches" role="radiogroup" aria-label="Color de tu track">
+            <button type="button" class="swatch-btn active" data-color="#00f5d4" style="--sw:#00f5d4" title="Cian Cyber"></button>
+            <button type="button" class="swatch-btn" data-color="#3b82f6" style="--sw:#3b82f6" title="Azul Eléctrico"></button>
+            <button type="button" class="swatch-btn" data-color="#f72585" style="--sw:#f72585" title="Magenta Neón"></button>
+            <button type="button" class="swatch-btn" data-color="#ffbe0b" style="--sw:#ffbe0b" title="Ámbar Solar"></button>
+            <button type="button" class="swatch-btn" data-color="#a855f7" style="--sw:#a855f7" title="Violeta Orbital"></button>
+            <button type="button" class="swatch-btn" data-color="#10b981" style="--sw:#10b981" title="Esmeralda"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sala de Sincronización -->
+      <div class="control-group room-group">
+        <label for="roomInput">
+          <span>Sala Compartida</span>
+          <strong id="roomBadge">SALA-JG1</strong>
+        </label>
+        <div class="room-row">
+          <input type="text" id="roomInput" maxlength="14" value="SALA-JG1" spellcheck="false" autocomplete="off" aria-label="Código de sala">
+          <button type="button" id="joinRoomBtn" class="room-apply-btn" title="Cambiar de sala">Unirse</button>
+        </div>
+      </div>
+
+      <!-- Modo de Posicionamiento -->
+      <div class="control-group">
+        <label>Control de Posición</label>
+        <div class="button-toggle-group">
+          <button type="button" class="mode-btn active" data-mode="manual" title="Haz clic en el mapa o usa las flechas/WASD para desplazarte">Click / Teclas</button>
+          <button type="button" class="mode-btn" data-mode="autopilot" title="Desplazamiento orbital automático pintando tu track">Piloto Auto</button>
+          <button type="button" class="mode-btn" data-mode="gps" title="Geolocalización GPS real del navegador">GPS Móvil</button>
+        </div>
+      </div>
+
+      <!-- Estilo Cartográfico -->
+      <div class="control-group">
+        <label>Mapa & Radar</label>
+        <div class="button-toggle-group">
+          <button type="button" class="mapstyle-btn active" data-style="cyber" title="CartoDB Dark Matter con filtro y rejilla cyber">Cyber Dark</button>
+          <button type="button" class="mapstyle-btn" data-style="night" title="Mapa oscuro de alto contraste">Nocturno</button>
+          <button type="button" class="mapstyle-btn" data-style="sat" title="Ortofoto satelital con superposición táctica">Satélite</button>
+          <button type="button" class="mapstyle-btn" data-style="grid" title="Radar vectorial puro sin teselas externas">Radar Puro</button>
+        </div>
+      </div>
+
+      <!-- Salto Rápido de Ciudad -->
+      <div class="control-group">
+        <label>Zona Activa</label>
+        <div class="button-toggle-group">
+          <button type="button" class="city-btn active" data-lat="40.4168" data-lon="-3.7038" title="Madrid — Puerta del Sol">MAD</button>
+          <button type="button" class="city-btn" data-lat="41.3874" data-lon="2.1686" title="Barcelona — Eixample">BCN</button>
+          <button type="button" class="city-btn" data-lat="43.2630" data-lon="-2.9350" title="Bilbao — Abandoibarra">BIO</button>
+          <button type="button" class="city-btn" data-lat="40.7580" data-lon="-73.9855" title="Nueva York — Manhattan">NYC</button>
+        </div>
+      </div>
+
+      <!-- Intensidad de Estela -->
+      <div class="control-group trail-group">
+        <label for="trailSlider">
+          <span>Estela Track</span>
+          <strong id="trailLabel">300 pts</strong>
+        </label>
+        <input type="range" id="trailSlider" min="50" max="800" step="50" value="300">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Modal de Configuración de Backend / Base de Datos en Tiempo Real -->
+  <div class="modal-backdrop hidden" id="backendModal" role="dialog" aria-modal="true" aria-labelledby="backendModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="lab-badge">SINCRONIZACIÓN MULTIUSUARIO</span>
+          <h2 id="backendModalTitle">Conexión a Backend / Base de Datos</h2>
+        </div>
+        <button type="button" id="closeModalBtn" class="icon-btn" aria-label="Cerrar configuración">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Elige cómo se sincronizan las posiciones y los tracks de los usuarios (3 letras). Por defecto funciona sin configuración mediante <strong>WebSocket Público + BroadcastChannel</strong>, pero puedes conectarlo a tu propio <strong>Supabase</strong>, <strong>Firebase Realtime DB</strong> o <strong>Servidor WebSocket</strong>.
+      </p>
+
+      <div class="provider-tabs" id="providerTabs">
+        <button type="button" class="provider-tab active" data-provider="builtin">⚡ Integrado (Zero-Config)</button>
+        <button type="button" class="provider-tab" data-provider="supabase">🟢 Supabase</button>
+        <button type="button" class="provider-tab" data-provider="firebase">🔥 Firebase RTDB</button>
+        <button type="button" class="provider-tab" data-provider="custom_ws">🔌 WebSocket Propio</button>
+      </div>
+
+      <!-- Panel 1: Built-in -->
+      <div class="provider-pane" data-pane="builtin">
+        <div class="info-box">
+          <strong>Canal Híbrido Activo de Serie:</strong>
+          <ul>
+            <li>Sincroniza al instante entre pestañas locales (<code>BroadcastChannel</code>) y entre distintos dispositivos en Internet mediante relay WebSocket público cifrado por código de sala.</li>
+            <li>Abre esta misma URL en tu móvil y en tu ordenador con la misma sala (ej. <code>SALA-JG1</code>) y verás ambos códigos de 3 letras pintando su track en vivo.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Panel 2: Supabase -->
+      <div class="provider-pane hidden" data-pane="supabase">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="sbUrlInput">Supabase Project URL</label>
+            <input type="url" id="sbUrlInput" placeholder="https://xyzcompany.supabase.co">
+          </div>
+          <div class="form-field">
+            <label for="sbKeyInput">Supabase Anon Public Key</label>
+            <input type="password" id="sbKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+          </div>
+        </div>
+        <div class="info-box">
+          <strong>Sincronización vía Supabase Realtime Broadcast:</strong>
+          No requiere siquiera crear tablas SQL: utiliza los canales efímeros de baja latencia de Supabase Realtime (WebSocket Phoenix) autenticados con tu <code>anon key</code>, además de hacer upsert opcional si existe la tabla <code>tracks_positions</code>.
+        </div>
+      </div>
+
+      <!-- Panel 3: Firebase Realtime Database -->
+      <div class="provider-pane hidden" data-pane="firebase">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="fbUrlInput">Firebase Realtime Database URL</label>
+            <input type="url" id="fbUrlInput" placeholder="https://tu-proyecto-default-rtdb.europe-west1.firebasedatabase.app">
+          </div>
+          <div class="form-field">
+            <label for="fbSecretInput">Database Auth Token (Opcional si reglas son públicas)</label>
+            <input type="password" id="fbSecretInput" placeholder="Token o dejar vacío">
+          </div>
+        </div>
+        <div class="info-box">
+          <strong>Sincronización en `/rooms/{sala}/users/{ID_3_LETRAS}.json`:</strong>
+          Publica coordenadas por REST <code>PATCH</code> y escucha cambios en tiempo real mediante Server-Sent Events (SSE) e interrogación adaptativa.
+        </div>
+      </div>
+
+      <!-- Panel 4: Custom WebSocket -->
+      <div class="provider-pane hidden" data-pane="custom_ws">
+        <div class="form-field">
+          <label for="wsUrlInput">URL de tu Servidor WebSocket (wss:// o ws://)</label>
+          <input type="url" id="wsUrlInput" placeholder="wss://mi-servidor-tracks.com/ws">
+        </div>
+        <div class="info-box">
+          <strong>Protocolo JSON estándar:</strong>
+          El cliente envía y recibe tramas JSON con el formato:
+          <code>{"type":"track_pos","room":"SALA-JG1","id":"JGG","color":"#00f5d4","lat":40.4168,"lon":-3.7038,"heading":85,"speed":18.4,"ts":1730000000}</code>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span class="modal-status" id="modalConnStatus">Listo para guardar</span>
+        <div class="modal-btns">
+          <button type="button" id="cancelBackendBtn" class="btn-modal secondary">Cerrar</button>
+          <button type="button" id="saveBackendBtn" class="btn-modal primary">Guardar y Conectar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="tracks.js"></script>
+</body>
+</html>

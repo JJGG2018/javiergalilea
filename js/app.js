@@ -468,6 +468,94 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 10. MINIATURA VIVA: RADAR & TRACKS 3 LETRAS (P09) ---
+  function initThumbTracks() {
+    const canvas = document.getElementById('thumbTracks');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const agents = [
+      { id: 'JGG', col: '#00f5d4', phase: 0.0, speed: 1.0, rx: 0.34, ry: 0.28, trail: [] },
+      { id: 'ANA', col: '#f72585', phase: 2.1, speed: -0.85, rx: 0.28, ry: 0.34, trail: [] },
+      { id: 'MAX', col: '#3b82f6', phase: 4.2, speed: 0.72, rx: 0.38, ry: 0.22, trail: [] }
+    ];
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#04060b';
+      ctx.fillRect(0, 0, w, h);
+
+      // Rejilla cartográfica oscura
+      ctx.strokeStyle = 'rgba(0, 245, 212, 0.06)';
+      ctx.lineWidth = 1;
+      for (let x = 24; x < w; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 20; y < h; y += 32) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      const t = now * 0.0014;
+      const cx = w * 0.5;
+      const cy = h * 0.54;
+
+      for (const a of agents) {
+        const ang = t * a.speed + a.phase;
+        const x = cx + Math.cos(ang) * (w * a.rx) + Math.sin(ang * 2.1) * 14;
+        const y = cy + Math.sin(ang * 1.3) * (h * a.ry);
+
+        a.trail.push({ x, y });
+        if (a.trail.length > 42) a.trail.shift();
+
+        if (a.trail.length > 1) {
+          ctx.strokeStyle = a.col;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          for (let i = 0; i < a.trail.length; i++) {
+            if (i === 0) ctx.moveTo(a.trail[i].x, a.trail[i].y);
+            else ctx.lineTo(a.trail[i].x, a.trail[i].y);
+          }
+          ctx.stroke();
+        }
+
+        // Baliza y código de 3 letras
+        ctx.fillStyle = a.col;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(7, 10, 18, 0.88)';
+        ctx.strokeStyle = a.col;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x - 16, y - 20, 32, 13, 4);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '800 8.5px ui-monospace, SFMono-Regular, Menlo, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(a.id, x, y - 13);
+      }
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -478,4 +566,5 @@
   initThumbClock();
   initThumbNews();
   initThumbLetters3d();
+  initThumbTracks();
 })();
