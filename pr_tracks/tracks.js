@@ -96,9 +96,11 @@
   let tileLayer = null;
   let fallbackZoom = 15;
 
+  const CARTO_API_KEY = 'cb1_573d_1_8c20f8aa768b764e7c67f1c8';
+
   const TILE_URLS = {
-    cyber: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    night: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png',
+    cyber: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=' + CARTO_API_KEY,
+    night: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=' + CARTO_API_KEY,
     sat: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
   };
 
