@@ -94,14 +94,16 @@
   // --- 4. MAPA CARTOGRÁFICO (LEAFLET + FALLBACK MERCATOR) ---
   let map = null;
   let tileLayer = null;
+  let satLabelsLayer = null;
   let fallbackZoom = 15;
 
   const CARTO_API_KEY = 'cb1_573d_1_8c20f8aa768b764e7c67f1c8';
 
   const TILE_URLS = {
-    cyber: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=' + CARTO_API_KEY,
-    night: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=' + CARTO_API_KEY,
-    sat: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+    cyber: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png?key=' + CARTO_API_KEY,
+    night: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}@2x.png?key=' + CARTO_API_KEY,
+    sat: 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&scale=2',
+    satLabels: 'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}@2x.png?key=' + CARTO_API_KEY
   };
 
   function initMap() {
@@ -111,15 +113,24 @@
       map = window.L.map('mapContainer', {
         center: [centerLat, centerLon],
         zoom: 15,
+        maxZoom: 22,
         zoomControl: false,
         attributionControl: true
       });
 
       tileLayer = window.L.tileLayer(TILE_URLS.cyber, {
-        maxZoom: 19,
+        maxNativeZoom: 20,
+        maxZoom: 22,
         subdomains: 'abcd',
         attribution: '&copy; OpenStreetMap &copy; CARTO'
       }).addTo(map);
+
+      satLabelsLayer = window.L.tileLayer(TILE_URLS.satLabels, {
+        maxNativeZoom: 20,
+        maxZoom: 22,
+        subdomains: 'abcd',
+        pane: 'overlayPane'
+      });
 
       // Click en el mapa para situar o mover tu baliza cuando estás dado de alta
       map.on('click', function (e) {
@@ -154,7 +165,17 @@
     mapStyle = style;
     mapContainer.className = 'style-' + style;
     if (map && tileLayer && TILE_URLS[style]) {
+      tileLayer.options.maxNativeZoom = style === 'sat' ? 21 : 20;
       tileLayer.setUrl(TILE_URLS[style]);
+    }
+    if (map && satLabelsLayer) {
+      if (style === 'sat') {
+        if (!map.hasLayer(satLabelsLayer)) {
+          satLabelsLayer.addTo(map);
+        }
+      } else if (map.hasLayer(satLabelsLayer)) {
+        map.removeLayer(satLabelsLayer);
+      }
     }
   }
 

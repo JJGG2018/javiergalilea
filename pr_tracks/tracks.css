@@ -50,10 +50,11 @@ html, body {
 }
 
 #mapContainer.style-sat .leaflet-tile-pane {
-  filter: brightness(0.68) contrast(1.22) saturate(0.85);
+  filter: brightness(0.95) contrast(1.08) saturate(1.06);
 }
 
-#mapContainer.style-grid .leaflet-tile-pane {
+#mapContainer.style-grid .leaflet-tile-pane,
+#mapContainer.style-grid .leaflet-overlay-pane {
   opacity: 0;
 }
 
