@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escáner de Red, Ping & Identificador LAN — Javier Galilea</title>
+  <meta name="description" content="Utilidad tipo ping continuo, escáner de subred CIDR, radar topológico e identificador de dispositivos (OUI MAC, puertos, TTL y SO) con motor en Rust WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_red/">
+  <meta name="theme-color" content="#05070c">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+  <link rel="stylesheet" href="red.css">
+</head>
+<body>
+  <!-- Fondo ambiental cibernético -->
+  <div class="ambient-bg" aria-hidden="true">
+    <canvas id="ambientNetCanvas"></canvas>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <!-- Barra superior estándar -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la portada">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #11 · RED LAN</span>
+        <h1>Escáner de Red &amp; Ping</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill mode-pill" id="modeStatusPill" title="Modo de descubrimiento activo">
+          <span class="status-dot web" id="modeStatusDot"></span>
+          <strong id="modeStatusLabel">SONDA WEB</strong>
+        </span>
+        <span class="stat-pill"><strong id="nodeCountStat">0</strong> nodos</span>
+        <span class="stat-pill"><strong id="liveRttStat">--</strong> ms</span>
+        <span class="stat-pill"><strong id="wasmTimeStat">0.02</strong> ms WASM</span>
+      </div>
+
+      <button type="button" id="scanPrimaryBtn" class="action-pill-btn" title="Iniciar escaneo de la subred especificada">
+        <span>🔍 Escanear</span>
+      </button>
+      <button type="button" id="agentModalBtn" class="action-pill-btn secondary-pill" title="Conectar Agente Local para Ping ICMP, tabla ARP, MACs y puertos reales">
+        <span id="agentBtnLabel">🔌 Agente Local</span>
+      </button>
+      <button type="button" id="importModalBtn" class="action-pill-btn secondary-pill" title="Pegar o importar salida de arp -a, ip neigh o nmap">
+        <span>📥 arp / nmap</span>
+      </button>
+
+      <button type="button" id="cleanModeBtn" class="icon-btn" title="Modo inmersivo (ocultar controles salvo volver)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+      <button type="button" id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <button type="button" id="restoreUiBtn" class="restore-ui-corner" title="Restaurar controles (ESC)" aria-label="Restaurar controles">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+    </svg>
+  </button>
+
+  <main class="scanner-workspace">
+    <!-- Barra de Control CIDR y Origen de Escaneo -->
+    <section class="command-panel glass-panel" aria-label="Configuración de subred y escaneo">
+      <div class="command-grid">
+        <!-- Columna 1: Subred CIDR -->
+        <div class="cmd-block cidr-block">
+          <div class="cmd-label-row">
+            <label for="cidrInput">Subred IPv4 (CIDR)</label>
+            <span class="cidr-meta-badge" id="cidrMetaReadout">254 hosts · 255.255.255.0 · RFC1918</span>
+          </div>
+          <div class="cidr-input-row">
+            <input type="text" id="cidrInput" value="192.168.1.0/24" placeholder="192.168.1.0/24" spellcheck="false" autocomplete="off">
+            <div class="cidr-presets">
+              <button type="button" class="chip-btn active" data-cidr="192.168.1.0/24">192.168.1/24</button>
+              <button type="button" class="chip-btn" data-cidr="192.168.0.0/24">192.168.0/24</button>
+              <button type="button" class="chip-btn" data-cidr="10.0.0.0/24">10.0.0/24</button>
+              <button type="button" class="chip-btn" data-cidr="172.16.0.0/24">172.16.0/24</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna 2: Motor / Origen -->
+        <div class="cmd-block mode-block">
+          <div class="cmd-label-row">
+            <span>Origen de Descubrimiento</span>
+            <span class="sample-warning hidden" id="sampleBannerPill">MUESTRA DE LABORATORIO</span>
+          </div>
+          <div class="button-toggle-group" id="sourceModeGroup">
+            <button type="button" class="source-btn active" data-mode="web" title="Sondeo directo desde el navegador">🌐 Sonda Web</button>
+            <button type="button" class="source-btn" data-mode="agent" title="Agente Python local con ICMP Ping, tabla ARP/MAC y puertos TCP">🔌 Agente L2/L3</button>
+            <button type="button" class="source-btn" data-mode="import" title="Analizar salidas reales de arp -a, ip neigh o nmap">📥 Importar</button>
+            <button type="button" class="source-btn" data-mode="sample" title="Cargar topología de muestra para probar el inspector y radar">🧪 Muestra</button>
+          </div>
+          <p class="mode-helper" id="modeHelperText">
+            El navegador sondea servicios web en tu subred sin instalar nada. Para obtener MACs OUI, ICMP y puertos, usa Agente L2/L3 o importa <code>arp -a</code>.
+          </p>
+        </div>
+
+        <!-- Columna 3: Acciones -->
+        <div class="cmd-block actions-block">
+          <div class="cmd-label-row">
+            <span>Control &amp; Exportación</span>
+            <span class="scan-status-text" id="scanSummaryText">Listo</span>
+          </div>
+          <div class="cmd-actions-row">
+            <button type="button" id="startScanBtn" class="btn-solid-cyan">🔍 Escanear</button>
+            <button type="button" id="stopScanBtn" class="btn-outline danger hidden">⏹ Detener</button>
+            <button type="button" id="exportJsonBtn" class="btn-outline" title="Exportar inventario a JSON">JSON</button>
+            <button type="button" id="exportCsvBtn" class="btn-outline" title="Exportar inventario a CSV">CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra de Progreso -->
+      <div class="scan-progress-wrap hidden" id="scanProgressWrap">
+        <div class="progress-track">
+          <div class="progress-fill" id="scanProgressFill"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="scanProgressDetail">Iniciando barrido...</span>
+          <strong id="scanProgressPct">0%</strong>
+        </div>
+      </div>
+    </section>
+
+    <!-- Zona Superior: Radar Topológico + Monitor Ping Continuo -->
+    <section class="upper-grid">
+      <!-- Radar Topológico -->
+      <div class="glass-panel radar-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="pulse-dot"></span>
+            <h2>Radar Topológico de Red</h2>
+          </div>
+          <div class="radar-legend">
+            <span class="leg-item"><i class="dot ok"></i>&lt;15ms</span>
+            <span class="leg-item"><i class="dot infra"></i>Router/Infra</span>
+            <span class="leg-item"><i class="dot warn"></i>Latencia</span>
+            <span class="leg-item"><i class="dot off"></i>Caché/Off</span>
+            <button type="button" id="radarOnlyOnlineBtn" class="mini-btn" title="Mostrar solo equipos activos">Solo ON</button>
+          </div>
+        </div>
+        <div class="radar-stage" id="radarStage">
+          <canvas id="radarCanvas" aria-label="Radar interactivo de dispositivos de red"></canvas>
+          <div class="radar-tooltip hidden" id="radarTooltip"></div>
+        </div>
+      </div>
+
+      <!-- Monitor Ping Continuo -->
+      <div class="glass-panel ping-card">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="pulse-dot blue"></span>
+            <h2>Monitor Ping &amp; Jitter</h2>
+          </div>
+          <div class="ping-quality-pill" id="pingQualityBadge">CALIDAD --/100</div>
+        </div>
+
+        <div class="ping-controls-row">
+          <input type="text" id="pingTargetInput" value="javiergalilea.es" placeholder="IP, dominio o URL (ej. 192.168.1.1)" spellcheck="false" autocomplete="off" aria-label="Objetivo de ping">
+          <select id="pingIntervalSelect" aria-label="Intervalo de ping">
+            <option value="500">0.5s</option>
+            <option value="1000" selected>1.0s</option>
+            <option value="2000">2.0s</option>
+          </select>
+          <button type="button" id="pingToggleBtn" class="btn-solid-cyan compact">⏸ Pausar</button>
+          <button type="button" id="pingResetBtn" class="mini-btn" title="Reiniciar serie de ping">⟲</button>
+        </div>
+
+        <div class="ping-quick-targets">
+          <button type="button" class="chip-btn active" data-ping-target="javiergalilea.es">Este sitio</button>
+          <button type="button" class="chip-btn" data-ping-target="1.1.1.1">1.1.1.1 (Cloudflare)</button>
+          <button type="button" class="chip-btn" data-ping-target="8.8.8.8">8.8.8.8 (Google)</button>
+          <button type="button" class="chip-btn" data-ping-target="192.168.1.1">192.168.1.1 (Gateway)</button>
+        </div>
+
+        <div class="ping-wave-box">
+          <canvas id="pingWaveCanvas" aria-label="Osciloscopio de latencia ping en tiempo real"></canvas>
+        </div>
+
+        <div class="ping-metrics-grid">
+          <div class="metric-cell">
+            <span>Mínimo</span>
+            <strong id="pmMin">-- ms</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Media</span>
+            <strong id="pmAvg">-- ms</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Máximo</span>
+            <strong id="pmMax">-- ms</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Jitter (RFC3550)</span>
+            <strong id="pmJitter">-- ms</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Percentil P95</span>
+            <strong id="pmP95">-- ms</strong>
+          </div>
+          <div class="metric-cell">
+            <span>Pérdida</span>
+            <strong id="pmLoss">0%</strong>
+          </div>
+        </div>
+
+        <div class="ping-log-feed" id="pingLogFeed" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- Zona Inferior: Tabla de Dispositivos + Inspector Detallado -->
+    <section class="lower-grid">
+      <!-- Tabla de Inventario -->
+      <div class="glass-panel inventory-card">
+        <div class="inventory-top">
+          <div class="panel-title">
+            <h2>Dispositivos Detectados</h2>
+            <span class="count-badge" id="filteredCountBadge">0 de 0</span>
+          </div>
+          <input type="search" id="searchDeviceInput" class="search-input" placeholder="Buscar IP, MAC o fabricante..." aria-label="Filtrar dispositivos">
+        </div>
+
+        <div class="category-filters" id="categoryFilters">
+          <button type="button" class="cat-filter active" data-cat="all">Todos</button>
+          <button type="button" class="cat-filter" data-cat="infra">Router / Red</button>
+          <button type="button" class="cat-filter" data-cat="server">Servidores / NAS</button>
+          <button type="button" class="cat-filter" data-cat="client">PCs / Móviles</button>
+          <button type="button" class="cat-filter" data-cat="media">TV / Impresoras</button>
+          <button type="button" class="cat-filter" data-cat="iot">IoT / Cámaras</button>
+        </div>
+
+        <div class="table-scroll">
+          <table id="devicesTable">
+            <thead>
+              <tr>
+                <th data-sort="status">Estado</th>
+                <th data-sort="ip">IPv4 ↕</th>
+                <th data-sort="name">Equipo / Host</th>
+                <th data-sort="mac">MAC &amp; Fabricante OUI</th>
+                <th data-sort="rtt">Latencia</th>
+                <th>Servicios</th>
+              </tr>
+            </thead>
+            <tbody id="devicesTableBody"></tbody>
+          </table>
+
+          <!-- Estado Vacío Inicial (Honesto, sin equipos inventados) -->
+          <div class="empty-inventory" id="emptyInventoryState">
+            <div class="empty-icon">📡</div>
+            <h3>Sin dispositivos escaneados todavía</h3>
+            <p>
+              Por seguridad del navegador, ninguna web puede leer tu tabla ARP ni lanzar ICMP bruto sin permiso. Elige cómo quieres identificar los equipos de tu red:
+            </p>
+            <div class="empty-actions">
+              <button type="button" class="btn-solid-cyan" id="emptyWebScanBtn">🌐 Escanear desde Navegador</button>
+              <button type="button" class="btn-outline" id="emptyAgentBtn">🔌 Usar Agente Local L2/L3</button>
+              <button type="button" class="btn-outline" id="emptyImportBtn">📥 Pegar <code>arp -a</code> / <code>nmap</code></button>
+              <button type="button" class="btn-outline" id="emptySampleBtn">🧪 Ver Topología de Muestra</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inspector Detallado de Equipo -->
+      <aside class="glass-panel inspector-card" id="deviceInspector" aria-label="Ficha detallada del dispositivo seleccionado">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="pulse-dot"></span>
+            <h2>Inspector del Equipo</h2>
+          </div>
+          <span class="source-tag" id="inspSourceTag">SIN SELECCIÓN</span>
+        </div>
+
+        <div class="inspector-placeholder" id="inspectorPlaceholder">
+          <div class="placeholder-glyph">🔍</div>
+          <p>Selecciona cualquier nodo en el radar o en la tabla para inspeccionar su dirección MAC, fabricante OUI, TTL, puertos abiertos, sistema inferido y lanzar un ping dedicado.</p>
+        </div>
+
+        <div class="inspector-content hidden" id="inspectorContent">
+          <div class="insp-hero">
+            <div class="insp-icon" id="inspIcon">💻</div>
+            <div class="insp-title-col">
+              <span class="insp-cat-pill" id="inspCategory">WORKSTATION</span>
+              <h3 id="inspMainTitle">192.168.1.1</h3>
+              <p class="insp-sub" id="inspSubtitle">Gateway / Router</p>
+            </div>
+          </div>
+
+          <div class="alias-editor">
+            <input type="text" id="aliasInput" maxlength="40" placeholder="Añadir alias personal (ej. Router Salón)">
+            <button type="button" id="saveAliasBtn" class="mini-btn active">Guardar</button>
+          </div>
+
+          <div class="insp-specs-grid">
+            <div class="spec-box">
+              <span>Dirección IPv4</span>
+              <strong id="inspIp">--</strong>
+            </div>
+            <div class="spec-box">
+              <span>Ámbito IP</span>
+              <strong id="inspScope">--</strong>
+            </div>
+            <div class="spec-box full">
+              <span>Dirección MAC</span>
+              <strong id="inspMac">No expuesta por el navegador</strong>
+            </div>
+            <div class="spec-box full">
+              <span>Fabricante (OUI / IEEE)</span>
+              <strong id="inspVendor">Desconocido</strong>
+            </div>
+            <div class="spec-box">
+              <span>Sistema Inferido</span>
+              <strong id="inspOs">--</strong>
+            </div>
+            <div class="spec-box">
+              <span>Confianza WASM</span>
+              <strong id="inspConf">--</strong>
+            </div>
+            <div class="spec-box">
+              <span>Latencia / TTL</span>
+              <strong id="inspRttTtl">--</strong>
+            </div>
+            <div class="spec-box">
+              <span>Hostname / mDNS</span>
+              <strong id="inspHostname">--</strong>
+            </div>
+          </div>
+
+          <div class="insp-section">
+            <div class="insp-section-label">Puertos TCP y Servicios Abiertos</div>
+            <div class="ports-wrap" id="inspPortsWrap"></div>
+          </div>
+
+          <div class="insp-section">
+            <div class="insp-section-label">Huella / Banner &amp; Diagnóstico Rust WASM</div>
+            <div class="banner-readout" id="inspFingerprintNotes">--</div>
+          </div>
+
+          <div class="insp-actions">
+            <button type="button" id="inspPingBtn" class="btn-solid-cyan full">📡 Hacer Ping Continuo a esta IP</button>
+            <button type="button" id="inspCopyJsonBtn" class="btn-outline">📋 Copiar JSON</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- Telemetría Real de la Conexión Local del Navegador -->
+    <section class="glass-panel client-telemetry-bar" aria-label="Telemetría real de red del navegador">
+      <div class="client-stat">
+        <span>Estado Browser</span>
+        <strong id="clientOnlineStat">Verificando...</strong>
+      </div>
+      <div class="client-stat">
+        <span>Enlace Detectado</span>
+        <strong id="clientLinkStat">--</strong>
+      </div>
+      <div class="client-stat">
+        <span>Descubrimiento WebRTC</span>
+        <strong id="clientWebrtcStat">Sondeando ICE...</strong>
+      </div>
+      <div class="client-stat">
+        <span>Motor Rust WASM</span>
+        <strong id="clientWasmStat">Cargando...</strong>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal 1: Agente Local L2/L3 -->
+  <div class="modal-backdrop hidden" id="agentModal" role="dialog" aria-modal="true" aria-labelledby="agentModalTitle">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <span class="lab-badge">MODO HARDWARE REAL L2/L3</span>
+          <h2 id="agentModalTitle">Agente Local Python (Zero-Config)</h2>
+        </div>
+        <button type="button" class="icon-btn modal-close" data-close="agentModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Los navegadores aíslan las tramas ARP e ICMP por seguridad. Ejecuta este script estándar de Python (sin librerías externas) en tu equipo para habilitar <strong>Ping ICMP real, tabla ARP completa, direcciones MAC, fabricantes OUI, banners HTTP y escaneo de puertos TCP</strong> directamente en esta interfaz.
+      </p>
+
+      <div class="agent-connect-row">
+        <div class="form-field">
+          <label for="agentUrlInput">URL del Agente Local (solo loopback)</label>
+          <input type="url" id="agentUrlInput" value="http://127.0.0.1:8781" spellcheck="false">
+        </div>
+        <button type="button" id="testAgentConnBtn" class="btn-solid-cyan">🔌 Conectar Agente</button>
+      </div>
+
+      <div class="agent-status-box" id="agentModalStatus">
+        Estado: No conectado · Ejecuta el agente abajo y pulsa «Conectar Agente».
+      </div>
+
+      <div class="code-box-group">
+        <div class="code-box-head">
+          <span>Opción A — Descargar y ejecutar en Windows / macOS / Linux</span>
+          <a href="agent/javier_lan_agent.py" download="javier_lan_agent.py" class="mini-btn active">⬇ Descargar .py</a>
+        </div>
+        <pre><code>python3 javier_lan_agent.py</code></pre>
+      </div>
+
+      <div class="code-box-group">
+        <div class="code-box-head">
+          <span>Opción B — Lanzar directo en Linux / macOS</span>
+          <button type="button" id="copyCmdUnixBtn" class="mini-btn">Copiar</button>
+        </div>
+        <pre><code id="cmdUnixText">curl -sSL https://javiergalilea.es/pr_red/agent/javier_lan_agent.py | python3</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Importar arp -a / ip neigh / nmap -->
+  <div class="modal-backdrop hidden" id="importModal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-card wide">
+      <div class="modal-header">
+        <div>
+          <span class="lab-badge">ANÁLISIS OFFLINE EN RUST WASM</span>
+          <h2 id="importModalTitle">Importar Salida de arp / ip neigh / nmap</h2>
+        </div>
+        <button type="button" class="icon-btn modal-close" data-close="importModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <p class="modal-desc">
+        Pega la salida de consola de tu ordenador o router (o arrastra un fichero <code>.txt</code>, <code>.xml</code> de Nmap o <code>.csv</code>). Todo se procesa localmente en tu navegador con <strong>Rust WebAssembly</strong>.
+      </p>
+
+      <div class="quick-cmds-row">
+        <span>Comandos útiles:</span>
+        <code>arp -a</code>
+        <code>ip neigh show</code>
+        <code>nmap -sn 192.168.1.0/24</code>
+        <code>nmap -sV -oX red.xml 192.168.1.0/24</code>
+      </div>
+
+      <textarea id="importTextarea" rows="8" spellcheck="false" placeholder="Ejemplo Windows / macOS / Linux:
+192.168.1.1      c0-25-06-aa-bb-cc   dinámico
+192.168.1.20     00:11:32:44:55:66   REACHABLE
+192.168.1.45     dc:a6:32:12:34:56   REACHABLE
+
+O pega salida de nmap -sn / nmap -sV / XML (-oX)..."></textarea>
+
+      <div class="modal-footer-actions">
+        <div class="left-actions">
+          <input type="file" id="importFileInput" accept=".txt,.log,.xml,.csv,.json" hidden>
+          <button type="button" id="pickImportFileBtn" class="btn-outline">📂 Elegir Archivo...</button>
+          <button type="button" id="pasteExampleImportBtn" class="btn-outline">📋 Cargar Ejemplo</button>
+        </div>
+        <button type="button" id="parseImportBtn" class="btn-solid-cyan">🔍 Analizar e Identificar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Banner -->
+  <div class="toast-banner hidden" id="toastBanner" role="status" aria-live="polite"></div>
+
+  <script src="red.js"></script>
+</body>
+</html>

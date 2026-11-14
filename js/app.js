@@ -674,6 +674,108 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 12. MINIATURA VIVA: ESCÁNER DE RED & PING LAN (P11) ---
+  function initThumbNetPing() {
+    const canvas = document.getElementById('thumbNetPing');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const nodes = [
+      { ang: 0.4, rad: 0.48, label: '.10 NAS', col: '#00f5d4' },
+      { ang: 1.55, rad: 0.72, label: '.15 RPi', col: '#3b82f6' },
+      { ang: 2.75, rad: 0.62, label: '.32 Mac', col: '#00f5d4' },
+      { ang: 3.9, rad: 0.82, label: '.54 iOS', col: '#a855f7' },
+      { ang: 5.1, rad: 0.56, label: '.70 Printer', col: '#ffbe0b' },
+    ];
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#05070c';
+      ctx.fillRect(0, 0, w, h);
+
+      const t = now * 0.001;
+      const cx = w * 0.36;
+      const cy = h * 0.5;
+      const maxR = Math.min(w * 0.28, h * 0.41);
+
+      // Anillos de radar
+      ctx.strokeStyle = 'rgba(0, 245, 212, 0.14)';
+      ctx.lineWidth = 1;
+      for (const f of [0.35, 0.68, 1]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, maxR * f, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Barrido sonar
+      const sweep = (t * 1.45) % (Math.PI * 2);
+      const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, maxR);
+      grad.addColorStop(0, 'rgba(0, 245, 212, 0.03)');
+      grad.addColorStop(1, 'rgba(0, 245, 212, 0.26)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, maxR, sweep - 0.65, sweep);
+      ctx.closePath();
+      ctx.fill();
+
+      // Nodos LAN y enlaces
+      for (const n of nodes) {
+        const nx = cx + Math.cos(n.ang) * (maxR * n.rad);
+        const ny = cy + Math.sin(n.ang) * (maxR * n.rad);
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.25)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+
+        ctx.fillStyle = n.col;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Gateway central
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mini osciloscopio Ping RTT a la derecha
+      const gx = w * 0.65;
+      const gw = w * 0.3;
+      const gy = h * 0.34;
+      const gh = h * 0.36;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.strokeRect(gx, gy, gw, gh);
+
+      ctx.strokeStyle = '#00f5d4';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      for (let i = 0; i <= 18; i++) {
+        const px = gx + (i / 18) * gw;
+        const amp = Math.sin(i * 0.65 - t * 3.8) * 0.26 + Math.cos(i * 1.3 - t * 2.1) * 0.14;
+        const py = gy + gh * (0.52 - amp);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 9px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.fillText('RTT 1.8 ms · OUI', gx, gy - 6);
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -686,4 +788,5 @@
   initThumbLetters3d();
   initThumbTracks();
   initThumbVisor3d();
+  initThumbNetPing();
 })();

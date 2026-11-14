@@ -79,12 +79,20 @@ javiergalilea/
 │   ├── engine.wasm       # Motor geodésico Haversine y cinemática en Rust WASM
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_visor3d/           # [Subproyecto 10: Visor de Piezas en 3D (WebGL2 + WASM)]
-    ├── index.html        # Visor CAD 3D interactivo a pantalla completa e inspector
-    ├── visor3d.css       # Interfaz Cyber Dark, gizmo de ejes, HUD dock y drag & drop
-    ├── visor3d.js        # Renderizador WebGL2, piezas por defecto y parsers (.STL/.OBJ/.PLY/.GLB)
-    ├── engine.wasm       # Motor geométrico (AABB, área, volumen, cámara auto/manual) en Rust WASM
-    └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+├── pr_visor3d/           # [Subproyecto 10: Visor de Piezas en 3D (WebGL2 + WASM)]
+│   ├── index.html        # Visor CAD 3D interactivo a pantalla completa e inspector
+│   ├── visor3d.css       # Interfaz Cyber Dark, gizmo de ejes, HUD dock y drag & drop
+│   ├── visor3d.js        # Renderizador WebGL2, piezas por defecto y parsers (.STL/.OBJ/.PLY/.GLB)
+│   ├── engine.wasm       # Motor geométrico (AABB, área, volumen, cámara auto/manual) en Rust WASM
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_red/               # [Subproyecto 11: Escáner de Red, Ping & Identificador LAN (WASM)]
+    ├── index.html        # Radar topológico, osciloscopio ping, inventario e inspector de red
+    ├── red.css           # Interfaz Cyber Dark responsive y modales de agente/importación
+    ├── red.js            # Sonda Web, parser arp/nmap, radar topológico e integración WASM
+    ├── engine.wasm       # Motor CIDR, métricas ping/jitter RFC3550 y base OUI en Rust WASM
+    ├── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+    └── agent/            # Agente local Python opcional L2/L3 (javier_lan_agent.py)
 ```
 
 ---
