@@ -556,6 +556,124 @@
     requestAnimationFrame(draw);
   }
 
+  // --- 11. MINIATURA VIVA: VISOR DE PIEZAS 3D (P10) ---
+  function initThumbVisor3d() {
+    const canvas = document.getElementById('thumbVisor3d');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Construir malla simplificada de piñón helicoidal 3D (top y bottom rings)
+    const teeth = 12;
+    const ringPts = [];
+    for (let t = 0; t < teeth; t++) {
+      const base = (t / teeth) * Math.PI * 2;
+      const step = (Math.PI * 2) / teeth;
+      ringPts.push([base, 0.72], [base + step * 0.2, 0.94], [base + step * 0.5, 0.94], [base + step * 0.7, 0.72]);
+    }
+    const pts3d = [];
+    const edges = [];
+    const twist = 0.18;
+    const halfH = 0.24;
+    const n = ringPts.length;
+    for (let i = 0; i < n; i++) {
+      const [a, r] = ringPts[i];
+      pts3d.push([Math.cos(a) * r, -halfH, Math.sin(a) * r]);
+      pts3d.push([Math.cos(a + twist) * r, halfH, Math.sin(a + twist) * r]);
+      const ni = (i + 1) % n;
+      edges.push([i * 2, ni * 2]);
+      edges.push([i * 2 + 1, ni * 2 + 1]);
+      if (i % 2 === 0) edges.push([i * 2, i * 2 + 1]);
+    }
+
+    // Anillo central del cubo
+    const hubSegs = 16;
+    const hubBase = pts3d.length;
+    for (let i = 0; i < hubSegs; i++) {
+      const a = (i / hubSegs) * Math.PI * 2;
+      const r = 0.34;
+      pts3d.push([Math.cos(a) * r, -0.32, Math.sin(a) * r]);
+      pts3d.push([Math.cos(a) * r, 0.32, Math.sin(a) * r]);
+      const ni = (i + 1) % hubSegs;
+      edges.push([hubBase + i * 2, hubBase + ni * 2]);
+      edges.push([hubBase + i * 2 + 1, hubBase + ni * 2 + 1]);
+      if (i % 2 === 0) edges.push([hubBase + i * 2, hubBase + i * 2 + 1]);
+    }
+
+    function draw(now) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      if (canvas.width !== Math.floor(rect.width)) {
+        canvas.width = Math.floor(rect.width);
+        canvas.height = Math.floor(rect.height);
+      }
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.fillStyle = '#05070c';
+      ctx.fillRect(0, 0, w, h);
+
+      const t = now * 0.0012;
+      const yaw = t * 0.85;
+      const pitch = 0.55 + Math.sin(t * 0.7) * 0.16;
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const cp = Math.cos(pitch), sp = Math.sin(pitch);
+
+      // Rejilla CAD de fondo en perspectiva
+      ctx.strokeStyle = 'rgba(0, 245, 212, 0.08)';
+      ctx.lineWidth = 1;
+      for (let g = -3; g <= 3; g++) {
+        const yOff = h * 0.72 + g * 8;
+        ctx.beginPath();
+        ctx.moveTo(w * 0.15, yOff);
+        ctx.lineTo(w * 0.85, yOff);
+        ctx.stroke();
+      }
+
+      const scale = Math.min(w, h) * 0.39;
+      const cx = w * 0.5;
+      const cyPos = h * 0.48;
+      const proj = new Array(pts3d.length);
+
+      for (let i = 0; i < pts3d.length; i++) {
+        const [x, y, z] = pts3d[i];
+        const rx = x * cy - z * sy;
+        const rz1 = x * sy + z * cy;
+        const ry = y * cp - rz1 * sp;
+        const rz = y * sp + rz1 * cp;
+        const pScale = 3.2 / (3.2 - rz * 0.55);
+        proj[i] = [cx + rx * scale * pScale, cyPos - ry * scale * pScale, rz];
+      }
+
+      // Ejes mini en esquina
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.55)';
+      ctx.lineWidth = 1.3;
+      for (let i = 0; i < edges.length; i++) {
+        const [a, b] = edges[i];
+        const pa = proj[a], pb = proj[b];
+        const depth = (pa[2] + pb[2]) * 0.5;
+        ctx.strokeStyle = depth > 0
+          ? 'rgba(0, 245, 212, 0.82)'
+          : 'rgba(59, 130, 246, 0.35)';
+        ctx.beginPath();
+        ctx.moveTo(pa[0], pa[1]);
+        ctx.lineTo(pb[0], pb[1]);
+        ctx.stroke();
+      }
+
+      // Puntos destacados en los dientes frontales
+      ctx.fillStyle = '#00f5d4';
+      for (let i = 0; i < n * 2; i += 4) {
+        const p = proj[i + 1];
+        if (p[2] > 0) {
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], 1.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -567,4 +685,5 @@
   initThumbNews();
   initThumbLetters3d();
   initThumbTracks();
+  initThumbVisor3d();
 })();

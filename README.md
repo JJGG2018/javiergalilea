@@ -72,11 +72,18 @@ javiergalilea/
 │   ├── engine.wasm       # Motor de físicas elásticas 3D y proyección en Rust WASM
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_tracks/            # [Subproyecto 09: Radar & Tracks Multiusuario (3 Letras)]
-    ├── index.html        # Mapa en tiempo real con estelas neón y HUD táctico
-    ├── tracks.css        # Estilos Cyber Dark, panel de radar y modal de backends
-    ├── tracks.js         # Sincronización híbrida (WSS, Supabase, Firebase) y GPX
-    ├── engine.wasm       # Motor geodésico Haversine y cinemática en Rust WASM
+├── pr_tracks/            # [Subproyecto 09: Radar & Tracks Multiusuario (3 Letras)]
+│   ├── index.html        # Mapa en tiempo real con estelas neón y HUD táctico
+│   ├── tracks.css        # Estilos Cyber Dark, panel de radar y modal de backends
+│   ├── tracks.js         # Sincronización híbrida (WSS, Supabase, Firebase) y GPX
+│   ├── engine.wasm       # Motor geodésico Haversine y cinemática en Rust WASM
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_visor3d/           # [Subproyecto 10: Visor de Piezas en 3D (WebGL2 + WASM)]
+    ├── index.html        # Visor CAD 3D interactivo a pantalla completa e inspector
+    ├── visor3d.css       # Interfaz Cyber Dark, gizmo de ejes, HUD dock y drag & drop
+    ├── visor3d.js        # Renderizador WebGL2, piezas por defecto y parsers (.STL/.OBJ/.PLY/.GLB)
+    ├── engine.wasm       # Motor geométrico (AABB, área, volumen, cámara auto/manual) en Rust WASM
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 

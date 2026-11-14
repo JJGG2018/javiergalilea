@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor de Piezas 3D (WebGL2 + Rust WASM) — Javier Galilea</title>
+  <meta name="description" content="Visor interactivo de piezas y modelos 3D en WebGL2 con piezas por defecto, carga de archivos externos (.STL, .OBJ, .PLY, .GLB), sección de corte y exploración manual y automática en Rust WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_visor3d/">
+  <meta name="theme-color" content="#05070c">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+  <link rel="stylesheet" href="visor3d.css">
+</head>
+<body>
+  <!-- Lienzo WebGL2 3D a Pantalla Completa -->
+  <canvas id="viewerCanvas" aria-label="Visor interactivo de piezas 3D"></canvas>
+
+  <!-- Gizmo Interactivo de Ejes 3D (X, Y, Z) -->
+  <canvas id="gizmoCanvas" width="108" height="108" title="Haz clic en un eje para alinear la vista"></canvas>
+
+  <!-- Barra Superior Flotante -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la página principal">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #10 · VISOR 3D CAD</span>
+        <h1>Visor de Piezas 3D</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="triStat">0</strong> tris</span>
+        <span class="stat-pill"><strong id="fpsCounter">60</strong> FPS</span>
+        <span class="stat-pill"><strong id="wasmTime">0.04</strong> ms</span>
+      </div>
+
+      <button type="button" id="openFileBtn" class="action-pill-btn" title="Abrir archivo 3D externo (.STL, .OBJ, .PLY, .GLB, .GLTF)">
+        <span>📂 Cargar Pieza</span>
+      </button>
+      <button type="button" id="autoTopBtn" class="action-pill-btn secondary-pill active" title="Alternar entre exploración automática y manual (Tecla Espacio)">
+        <span id="autoTopLabel">🤖 Auto: ON</span>
+      </button>
+      <button type="button" id="resetCamBtn" class="action-pill-btn secondary-pill" title="Centrar y restablecer encuadre (Tecla R)">
+        <span>⟲ Centrar</span>
+      </button>
+
+      <button type="button" id="cleanModeBtn" class="icon-btn" title="Modo inmersivo (ocultar todos los controles salvo volver)">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+      </button>
+      <button type="button" id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+      <button type="button" id="toggleHudBtn" class="icon-btn" title="Mostrar/Ocultar controles">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <input type="file" id="fileInput" accept=".stl,.obj,.ply,.glb,.gltf" hidden>
+
+  <button type="button" id="restoreUiBtn" class="restore-ui-corner" title="Restaurar controles (ESC)" aria-label="Restaurar controles">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+      <line x1="1" y1="1" x2="23" y2="23"></line>
+    </svg>
+  </button>
+
+  <!-- Indicador Flotante de Interacción -->
+  <div class="canvas-hint" id="canvasHint">
+    ⚙️ Arrastra para orbitar · Shift+Arrastra o botón derecho para mover · Rueda para zoom · Suelta un .STL / .OBJ / .PLY / .GLB
+  </div>
+
+  <!-- Ficha Técnica e Inspector Flotante (Derecha) -->
+  <aside class="inspector-panel" id="inspectorPanel" aria-label="Ficha técnica y herramientas de inspección 3D">
+    <div class="inspector-header">
+      <div class="inspector-title">
+        <span class="pulse-dot"></span>
+        <span>INSPECTOR CAD</span>
+      </div>
+      <div class="inspector-actions">
+        <button type="button" id="flipUpBtn" class="mini-btn" title="Rotar eje vertical 90° (Z-up ↔ Y-up)">Z↔Y</button>
+        <button type="button" id="exportStlBtn" class="mini-btn" title="Descargar la pieza actual en formato binario .STL">📥 STL</button>
+      </div>
+    </div>
+
+    <div class="part-identity">
+      <span class="part-source-badge" id="partSourceBadge">PIEZA POR DEFECTO</span>
+      <h2 id="partTitle">Piñón Helicoidal</h2>
+    </div>
+
+    <div class="specs-grid">
+      <div class="spec-cell">
+        <span>Triángulos</span>
+        <strong id="specTris">--</strong>
+      </div>
+      <div class="spec-cell">
+        <span>Vértices</span>
+        <strong id="specVerts">--</strong>
+      </div>
+      <div class="spec-cell full-span">
+        <span>Dimensiones (X × Y × Z)</span>
+        <strong id="specDims">--</strong>
+      </div>
+      <div class="spec-cell">
+        <span>Superficie</span>
+        <strong id="specArea">--</strong>
+      </div>
+      <div class="spec-cell">
+        <span>Volumen</span>
+        <strong id="specVol">--</strong>
+      </div>
+    </div>
+
+    <div class="inspector-section">
+      <div class="inspector-label">
+        <span>Vistas Manuales</span>
+        <span class="key-hint" id="exploreBadge">AUTO</span>
+      </div>
+      <div class="snap-views-grid">
+        <button type="button" class="snap-btn" data-view="iso" title="Vista Isométrica 3D">ISO</button>
+        <button type="button" class="snap-btn" data-view="front" title="Alzado Frontal (+Z)">Alzado</button>
+        <button type="button" class="snap-btn" data-view="side" title="Perfil Lateral (+X)">Perfil</button>
+        <button type="button" class="snap-btn" data-view="top" title="Planta Superior (+Y)">Planta</button>
+      </div>
+    </div>
+
+    <div class="inspector-section">
+      <div class="inspector-label">
+        <label for="clipSlider">Sección de Corte Y</label>
+        <strong id="clipLabel">100%</strong>
+      </div>
+      <input type="range" id="clipSlider" min="8" max="100" step="1" value="100" aria-label="Plano de corte vertical">
+    </div>
+
+    <div class="inspector-footer">
+      <button type="button" id="gridToggleBtn" class="inspector-foot-btn active" title="Mostrar u ocultar cuadrícula de referencia">📐 Rejilla</button>
+      <button type="button" id="axesToggleBtn" class="inspector-foot-btn active" title="Mostrar u ocultar triada de ejes 3D">🧭 Ejes XYZ</button>
+    </div>
+  </aside>
+
+  <!-- Panel de Control Flotante (Dock Inferior) -->
+  <aside class="hud-dock" id="hudDock">
+    <div class="hud-controls">
+      <!-- Piezas Preparadas por Defecto + Archivo Externo -->
+      <div class="control-group">
+        <label>
+          <span>Piezas 3D</span>
+          <strong id="presetCountLabel">5 por defecto</strong>
+        </label>
+        <div class="button-toggle-group" id="presetGroup">
+          <button type="button" class="preset-btn active" data-preset="gear" title="Engranaje helicoidal de 18 dientes con chavetero">Piñón</button>
+          <button type="button" class="preset-btn" data-preset="turbine" title="Rotor de turbina axial con 11 álabes torsionados">Turbina</button>
+          <button type="button" class="preset-btn" data-preset="flange" title="Brida mecánica CNC con nervios de refuerzo y 6 taladros">Brida</button>
+          <button type="button" class="preset-btn" data-preset="heatsink" title="Disipador térmico mecanizado con aletas radiales">Disipador</button>
+          <button type="button" class="preset-btn" data-preset="knot" title="Nudo toroidal paramétrico suave">Toroide</button>
+          <button type="button" class="preset-btn hidden" id="customPresetBtn" data-preset="custom" title="Archivo externo cargado">Externa</button>
+        </div>
+      </div>
+
+      <!-- Modo de Exploración: Manual vs Automática -->
+      <div class="control-group">
+        <label>Exploración</label>
+        <div class="button-toggle-group">
+          <button type="button" class="explore-btn" data-explore="manual" title="Control manual total con ratón, táctil o vistas CAD">🖐️ Manual</button>
+          <button type="button" class="explore-btn active" data-explore="auto" title="Exploración automática autónoma de la pieza">🤖 Automática</button>
+        </div>
+      </div>
+
+      <!-- Estilo de Exploración Automática -->
+      <div class="control-group" id="autoStyleGroup">
+        <label>Recorrido Auto</label>
+        <div class="button-toggle-group">
+          <button type="button" class="automode-btn active" data-automode="0" title="Rotación orbital continua de 360°">Órbita 360°</button>
+          <button type="button" class="automode-btn" data-automode="1" title="Barrido cinematográfico con ángulos y zoom dinámicos">Tour Cine</button>
+          <button type="button" class="automode-btn" data-automode="2" title="Recorrido automático por vistas técnicas CAD">Vistas CAD</button>
+        </div>
+      </div>
+
+      <!-- Material / Acabado de Renderizado -->
+      <div class="control-group">
+        <label>Acabado 3D</label>
+        <div class="button-toggle-group">
+          <button type="button" class="shade-btn active" data-shade="solid" title="Sólido CAD con iluminación de estudio de 3 puntos">Sólido</button>
+          <button type="button" class="shade-btn" data-shade="titanium" title="Acabado metálico titanio de alto contraste">Titanio</button>
+          <button type="button" class="shade-btn" data-shade="wireframe" title="Malla triangular cian sobre núcleo oscuro">Malla</button>
+          <button type="button" class="shade-btn" data-shade="xray" title="Holograma translúcido de rayos X">Rayos X</button>
+        </div>
+      </div>
+
+      <!-- Velocidad de Exploración Automática -->
+      <div class="control-group speed-group">
+        <label for="speedSlider">
+          <span>Velocidad Auto</span>
+          <strong id="speedLabel">0.9×</strong>
+        </label>
+        <input type="range" id="speedSlider" min="0.2" max="2.5" step="0.1" value="0.9">
+      </div>
+    </div>
+  </aside>
+
+  <!-- Overlay Drag & Drop para Ficheros Externos -->
+  <div class="drop-overlay hidden" id="dropOverlay" aria-hidden="true">
+    <div class="drop-card">
+      <div class="drop-icon">📦</div>
+      <h3>Suelta tu pieza 3D aquí</h3>
+      <p>Carga instantánea en el navegador · Sin subir datos a servidores</p>
+      <div class="drop-formats">
+        <span>.STL</span>
+        <span>.OBJ</span>
+        <span>.PLY</span>
+        <span>.GLB</span>
+        <span>.GLTF</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notificación Toast -->
+  <div class="toast-banner hidden" id="toastBanner" role="status" aria-live="polite"></div>
+
+  <script src="visor3d.js"></script>
+</body>
+</html>
