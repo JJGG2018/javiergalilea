@@ -24,6 +24,12 @@
   let audioCtx = null;
   let lastAudioAlertTime = 0;
 
+  // Velocidad y telemetría GPS continua
+  let currentSpeedKmh = 0;
+  let lastGeoFix = null; // { lat, lng, time }
+  let geoWatchId = null;
+  let isFirstFix = true;
+
   // WebAssembly
   let wasmInstance = null;
   let wasmMemory = null;
@@ -41,6 +47,8 @@
 
   // DOM
   const counterSpan = document.getElementById('counterSpan');
+  const speedPill = document.getElementById('speedPill');
+  const speedValue = document.getElementById('speedValue');
   const wasmStatusPill = document.getElementById('wasmStatusPill');
   const loadingBox = document.getElementById('loadingBox');
   const mapView = document.getElementById('mapView');
@@ -76,6 +84,7 @@
   const modalTypeBadge = document.getElementById('modalTypeBadge');
   const modalRoad = document.getElementById('modalRoad');
   const modalPk = document.getElementById('modalPk');
+  const modalSpeedSign = document.getElementById('modalSpeedSign');
   const modalIconBox = document.getElementById('modalIconBox');
   const modalTitle = document.getElementById('modalTitle');
   const modalDirText = document.getElementById('modalDirText');
@@ -294,6 +303,8 @@
   function checkProximityAlert() {
     if (!userCoords || allRadars.length === 0) {
       proximityAlertBanner.style.display = 'none';
+      proximityAlertBanner.classList.remove('overspeed-alert');
+      if (speedPill) speedPill.classList.remove('overspeed');
       return;
     }
 
@@ -322,21 +333,35 @@
         : `${nearestDist.toFixed(1)} km`;
       
       const tipoStr = nearestRadar.type === 'tramo' ? 'Radar de Tramo' : 'Radar Fijo';
-      alertDesc.innerHTML = `<strong>${tipoStr} en ${nearestRadar.road} PK ${nearestRadar.pk}</strong> a <strong>${distStr}</strong> (${nearestRadar.dir}) en ${nearestRadar.prov}`;
-      proximityAlertBanner.style.display = 'flex';
+      const limit = nearestRadar.limit || 120;
+      const isOverspeed = currentSpeedKmh > limit;
 
-      playAcousticChime();
+      if (isOverspeed) {
+        const exceso = currentSpeedKmh - limit;
+        proximityAlertBanner.classList.add('overspeed-alert');
+        if (speedPill) speedPill.classList.add('overspeed');
+        alertDesc.innerHTML = `<span class="alert-overspeed-tag">🚨 ¡EXCESO DE VELOCIDAD!</span> <strong>${tipoStr} en ${nearestRadar.road} PK ${nearestRadar.pk}</strong> a <strong>${distStr}</strong>. Circulas a <strong>${currentSpeedKmh} km/h</strong> en tramo regulado a <span class="speed-sign" style="width:24px;height:24px;font-size:0.68rem;vertical-align:middle;margin:0 4px;">${limit}</span> (<strong>+${exceso} km/h</strong> de exceso).`;
+        playAcousticChime(true);
+      } else {
+        proximityAlertBanner.classList.remove('overspeed-alert');
+        if (speedPill) speedPill.classList.remove('overspeed');
+        alertDesc.innerHTML = `<strong>${tipoStr} en ${nearestRadar.road} PK ${nearestRadar.pk}</strong> a <strong>${distStr}</strong> (${nearestRadar.dir}) en ${nearestRadar.prov} · Límite: <span class="speed-sign" style="width:24px;height:24px;font-size:0.68rem;vertical-align:middle;margin:0 4px;">${limit}</span>${currentSpeedKmh > 0 ? ` · Tu velocidad: <strong>${currentSpeedKmh} km/h</strong> (dentro del límite ✅)` : ''}`;
+        playAcousticChime(false);
+      }
+      proximityAlertBanner.style.display = 'flex';
     } else {
       proximityAlertBanner.style.display = 'none';
+      proximityAlertBanner.classList.remove('overspeed-alert');
+      if (speedPill) speedPill.classList.remove('overspeed');
     }
   }
 
   // Reproducir aviso acústico sintetizado (Web Audio API)
-  function playAcousticChime() {
+  function playAcousticChime(isUrgent = false) {
     if (!soundEnabled) return;
     const now = Date.now();
-    // Evitar saturar: máximo 1 aviso cada 12 segundos
-    if (now - lastAudioAlertTime < 12000) return;
+    const minInterval = isUrgent ? 5000 : 12000;
+    if (now - lastAudioAlertTime < minInterval) return;
     lastAudioAlertTime = now;
 
     try {
@@ -352,19 +377,34 @@
       const osc2 = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
 
-      osc1.type = 'sine';
+      osc1.type = isUrgent ? 'sawtooth' : 'sine';
       osc2.type = 'triangle';
 
       const t = audioCtx.currentTime;
-      // Tono de alerta doble 880 Hz -> 1174 Hz
-      osc1.frequency.setValueAtTime(880, t);
-      osc1.frequency.exponentialRampToValueAtTime(1174, t + 0.18);
-      osc2.frequency.setValueAtTime(880 * 2, t);
-      osc2.frequency.exponentialRampToValueAtTime(1174 * 2, t + 0.18);
+      if (isUrgent) {
+        // Tono bitonal urgente de exceso de velocidad: 980 Hz -> 1480 Hz
+        osc1.frequency.setValueAtTime(980, t);
+        osc1.frequency.exponentialRampToValueAtTime(1480, t + 0.12);
+        osc1.frequency.setValueAtTime(980, t + 0.18);
+        osc1.frequency.exponentialRampToValueAtTime(1480, t + 0.30);
 
-      gainNode.gain.setValueAtTime(0.001, t);
-      gainNode.gain.linearRampToValueAtTime(0.25, t + 0.05);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+        osc2.frequency.setValueAtTime(1960, t);
+        osc2.frequency.exponentialRampToValueAtTime(2960, t + 0.12);
+
+        gainNode.gain.setValueAtTime(0.001, t);
+        gainNode.gain.linearRampToValueAtTime(0.35, t + 0.04);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      } else {
+        // Tono de alerta suave 880 Hz -> 1174 Hz
+        osc1.frequency.setValueAtTime(880, t);
+        osc1.frequency.exponentialRampToValueAtTime(1174, t + 0.18);
+        osc2.frequency.setValueAtTime(880 * 2, t);
+        osc2.frequency.exponentialRampToValueAtTime(1174 * 2, t + 0.18);
+
+        gainNode.gain.setValueAtTime(0.001, t);
+        gainNode.gain.linearRampToValueAtTime(0.25, t + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+      }
 
       osc1.connect(gainNode);
       osc2.connect(gainNode);
@@ -412,6 +452,7 @@
             <span class="radar-type-badge ${typeBadgeCls}">${typeText}</span>
             <span class="cam-badge-road">${r.road || 'Vía'}</span>
             <span class="cam-badge-pk">PK ${r.pk}</span>
+            <span class="speed-sign" title="Límite reglamentario DGT: ${r.limit || 120} km/h">${r.limit || 120}</span>
           </div>
           <span class="cam-badge-prov">${r.prov}</span>
         </div>
@@ -421,6 +462,7 @@
             <h4>${titleText}</h4>
             <p>Sentido: <strong>${r.dir}</strong></p>
             <p>Provincia: <strong>${r.prov}</strong></p>
+            <p>Límite tramo: <strong style="color:#f87171;">${r.limit || 120} km/h</strong></p>
           </div>
         </div>
         <div class="radar-card-footer">
@@ -453,6 +495,7 @@
     modalTypeBadge.className = `radar-type-badge ${isTramo ? 'type-tramo' : 'type-fijo'}`;
     modalRoad.textContent = r.road;
     modalPk.textContent = `PK ${r.pk}`;
+    if (modalSpeedSign) modalSpeedSign.textContent = r.limit || 120;
 
     modalIconBox.textContent = isTramo ? '📏' : '📸';
     modalIconBox.style.background = isTramo ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)';
@@ -463,7 +506,8 @@
 
     if (userCoords) {
       const d = r._distKm !== undefined ? r._distKm : Math.round(haversineKm(userCoords.lat, userCoords.lng, r.lat, r.lng) * 10) / 10;
-      modalDistText.textContent = `📍 Distancia a ti: ${d} km`;
+      const speedPart = currentSpeedKmh > 0 ? ` · Tu velocidad: ${currentSpeedKmh} km/h` : '';
+      modalDistText.textContent = `📍 Distancia a ti: ${d} km${speedPart}`;
     } else {
       modalDistText.textContent = '📍 Activa "Cerca de Mí" para calcular distancia';
     }
@@ -551,11 +595,11 @@
           <div class="map-popup-card">
             <div class="map-popup-header">
               <strong style="color:#f59e0b;">📏 Tramo ${r.road} · PK ${r.pk}</strong>
-              <span style="font-size:0.75rem; color:#94a3b8;">${r.prov}</span>
+              <span class="speed-sign" style="width:24px; height:24px; font-size:0.68rem; border-width:2.5px;">${r.limit || 120}</span>
             </div>
             <div style="font-size:0.8rem; color:#f8fafc; margin-top:0.3rem;">
-              Control de Velocidad Media<br>
-              Sentido: <strong>${r.dir}</strong>
+              Control de Velocidad Media · Límite: <strong>${r.limit || 120} km/h</strong><br>
+              Sentido: <strong>${r.dir}</strong> · ${r.prov}
             </div>
             <div style="margin-top:0.4rem; text-align:right;">
               <button class="action-pill-btn" onclick="document.dispatchEvent(new CustomEvent('openRadarModal', { detail: '${r.id}' }))" style="padding:0.25rem 0.6rem; font-size:0.72rem;">Ver Ficha</button>
@@ -600,11 +644,11 @@
           <div class="map-popup-card">
             <div class="map-popup-header">
               <strong style="color:#ef4444;">📸 Radar Fijo ${r.road} · PK ${r.pk}</strong>
-              <span style="font-size:0.75rem; color:#94a3b8;">${r.prov}</span>
+              <span class="speed-sign" style="width:24px; height:24px; font-size:0.68rem; border-width:2.5px;">${r.limit || 120}</span>
             </div>
             <div style="font-size:0.8rem; color:#f8fafc; margin-top:0.3rem;">
-              Cinemómetro en Cabina/Arcén<br>
-              Sentido: <strong>${r.dir}</strong>
+              Cinemómetro en Cabina/Arcén · Límite: <strong>${r.limit || 120} km/h</strong><br>
+              Sentido: <strong>${r.dir}</strong> · ${r.prov}
             </div>
             <div style="margin-top:0.4rem; text-align:right;">
               <button class="action-pill-btn" onclick="document.dispatchEvent(new CustomEvent('openRadarModal', { detail: '${r.id}' }))" style="padding:0.25rem 0.6rem; font-size:0.72rem;">Ver Ficha</button>
@@ -671,17 +715,75 @@
         <div class="map-popup-header" style="justify-content: center; margin-bottom: 0.35rem;">
           <strong style="color: #00f5d4; font-size: 0.95rem;">📍 Tu Posición Actual</strong>
         </div>
-        <p style="font-size: 0.78rem; color: #94a3b8; margin: 0.2rem 0;">
+        <p style="font-size: 0.88rem; color: #f8fafc; margin: 0.3rem 0; font-weight:700;">
+          🚗 Velocidad: <span style="color:#00f5d4; font-size:1.05rem;">${currentSpeedKmh}</span> km/h
+        </p>
+        <p style="font-size: 0.76rem; color: #94a3b8; margin: 0.2rem 0;">
           Lat: ${userCoords.lat.toFixed(4)} · Lng: ${userCoords.lng.toFixed(4)}
         </p>
         <div style="font-size: 0.74rem; color: #00f5d4; font-weight: 600; margin-top: 0.35rem;">
-          Distancias calculadas con Rust WebAssembly
+          Distancias y proximidad en Rust WASM
         </div>
       </div>
     `);
   }
 
-  // Solicitar ubicación GPS
+  // Manejar posición GPS y telemetría de velocidad instantánea
+  function handleGeoPosition(pos) {
+    const coords = pos.coords;
+    const now = Date.now();
+
+    // 1. Calcular velocidad en km/h
+    let speedKmh = 0;
+    if (coords.speed !== null && !isNaN(coords.speed) && coords.speed >= 0) {
+      // coords.speed viene en m/s desde el sensor GPS
+      speedKmh = Math.round(coords.speed * 3.6);
+    } else if (lastGeoFix) {
+      // Fallback geodésico: calcular distancia entre los dos últimos fixes en el tiempo
+      const dtSec = (now - lastGeoFix.time) / 1000;
+      if (dtSec >= 1 && dtSec <= 30) {
+        const dKm = wasmLoaded && wasmInstance
+          ? wasmInstance.exports.distance_km(lastGeoFix.lat, lastGeoFix.lng, coords.latitude, coords.longitude)
+          : haversineKm(lastGeoFix.lat, lastGeoFix.lng, coords.latitude, coords.longitude);
+        speedKmh = Math.round((dKm / dtSec) * 3600);
+        if (speedKmh < 3) speedKmh = 0; // filtrar jitter en reposo
+        if (speedKmh > 260) speedKmh = currentSpeedKmh; // filtrar lecturas erráticas
+      }
+    }
+
+    lastGeoFix = { lat: coords.latitude, lng: coords.longitude, time: now };
+    currentSpeedKmh = speedKmh;
+
+    if (speedValue) {
+      speedValue.textContent = currentSpeedKmh;
+    }
+
+    userCoords = {
+      lat: coords.latitude,
+      lng: coords.longitude,
+      accuracy: coords.accuracy || 1200
+    };
+
+    geoBtn.innerHTML = '<span>📍 Cerca de Mí (Activo)</span>';
+    geoBtn.style.background = 'rgba(0, 245, 212, 0.3)';
+
+    if (currentSort === 'proximity') {
+      applyFilters();
+    } else {
+      checkProximityAlert();
+    }
+
+    if (mapInitialized && map) {
+      drawUserPositionMarker();
+      if (isFirstFix) {
+        map.flyTo([userCoords.lat, userCoords.lng], 12, { duration: 1.2 });
+        if (userMarker) setTimeout(() => userMarker.openPopup(), 1250);
+        isFirstFix = false;
+      }
+    }
+  }
+
+  // Solicitar ubicación GPS e iniciar escucha continua de velocidad (watchPosition)
   function requestUserLocation() {
     if (!navigator.geolocation) {
       alert('Tu navegador no soporta geolocalización GPS.');
@@ -690,31 +792,26 @@
 
     geoBtn.innerHTML = '<span>⏳ Obteniendo GPS...</span>';
 
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        userCoords = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy || 1200
-        };
-        geoBtn.innerHTML = '<span>📍 Cerca de Mí (Activo)</span>';
-        geoBtn.style.background = 'rgba(0, 245, 212, 0.3)';
-        sortSelect.value = 'proximity';
-        currentSort = 'proximity';
-        applyFilters();
+    if (geoWatchId !== null) {
+      navigator.geolocation.clearWatch(geoWatchId);
+      geoWatchId = null;
+    }
 
-        if (mapInitialized && map) {
-          drawUserPositionMarker();
-          map.flyTo([userCoords.lat, userCoords.lng], 11, { duration: 1.2 });
-          if (userMarker) setTimeout(() => userMarker.openPopup(), 1250);
-        }
-      },
+    geoWatchId = navigator.geolocation.watchPosition(
+      handleGeoPosition,
       err => {
-        console.warn('Geolocalización fallida:', err.message);
-        geoBtn.innerHTML = '<span>📍 Cerca de Mí</span>';
-        alert('No se pudo acceder a tu ubicación. Comprueba los permisos de tu navegador.');
+        console.warn('watchPosition fallido, intentando getCurrentPosition:', err.message);
+        navigator.geolocation.getCurrentPosition(
+          handleGeoPosition,
+          e => {
+            console.warn('getCurrentPosition fallido:', e.message);
+            geoBtn.innerHTML = '<span>📍 Cerca de Mí</span>';
+            alert('No se pudo acceder a tu ubicación GPS. Comprueba los permisos de tu navegador.');
+          },
+          { timeout: 10000, enableHighAccuracy: true }
+        );
       },
-      { timeout: 10000, enableHighAccuracy: true }
+      { timeout: 15000, enableHighAccuracy: true, maximumAge: 2000 }
     );
   }
 

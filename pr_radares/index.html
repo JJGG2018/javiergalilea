@@ -39,6 +39,9 @@
     <div class="topbar-right">
       <div class="telemetry-pills">
         <span class="stat-pill"><strong id="counterSpan">0</strong> / 737 Radares</span>
+        <span class="stat-pill speed-pill" id="speedPill" title="Tu velocidad instantánea calculada por GPS">
+          🚗 <strong id="speedValue">0</strong> km/h
+        </span>
         <span class="stat-pill wasm-pill" id="wasmStatusPill" title="Motor de proximidad y geocálculo en WebAssembly">
           <span class="status-dot online"></span>
           <span>Rust WASM</span>
@@ -177,6 +180,7 @@
           <span class="radar-type-badge" id="modalTypeBadge">RADAR FIJO</span>
           <span class="cam-badge-road" id="modalRoad">A-1</span>
           <span class="cam-badge-pk" id="modalPk">PK 24.5</span>
+          <span class="speed-sign" id="modalSpeedSign">120</span>
         </div>
         <button id="modalCloseBtn" class="modal-close-btn" title="Cerrar modal">&times;</button>
       </div>
