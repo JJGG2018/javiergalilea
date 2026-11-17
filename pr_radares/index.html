@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radares DGT en Tiempo Real — Javier Galilea</title>
+  <meta name="description" content="Localizador y mapa interactivo oficial de cinemómetros de la Dirección General de Tráfico (DGT): radares fijos en pórticos/cabinas y radares de tramo en carreteras de España. Motor de cálculo espacial en Rust WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_radares/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚨</text></svg>">
+
+  <!-- Leaflet para el modo Mapa Interactivo -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="radares.css">
+</head>
+<body>
+  <!-- Fondo dinámico sutil -->
+  <div class="ambient-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <!-- Barra Superior Sticky -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la portada de javiergalilea.es">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #13 · CINEMÓMETROS DGT</span>
+        <h1>Radares de Tráfico en Vivo</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="counterSpan">0</strong> / 737 Radares</span>
+        <span class="stat-pill wasm-pill" id="wasmStatusPill" title="Motor de proximidad y geocálculo en WebAssembly">
+          <span class="status-dot online"></span>
+          <span>Rust WASM</span>
+        </span>
+      </div>
+
+      <!-- Selector de Modo de Vista: Mapa vs Catálogo -->
+      <div class="view-switch-group">
+        <button id="viewMapBtn" class="switch-btn active" title="Ver en mapa interactivo con tramos">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+          <span>Mapa</span>
+        </button>
+        <button id="viewGridBtn" class="switch-btn" title="Ver en listado de fichas">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Fichas</span>
+        </button>
+      </div>
+
+      <!-- Acciones de GPS y Audio -->
+      <button id="geoBtn" class="action-pill-btn" title="Activar posición GPS y calcular distancias en Rust WASM">
+        <span>📍 Cerca de Mí</span>
+      </button>
+
+      <button id="soundToggleBtn" class="sound-toggle-btn" title="Activar/desactivar aviso acústico por proximidad">
+        <span id="soundIcon">🔇</span>
+        <span id="soundLabel">Avisador OFF</span>
+      </button>
+
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Banner HUD de Alerta por Proximidad (se activa cuando hay un radar a menos del radio seleccionado) -->
+  <aside id="proximityAlertBanner" class="radar-alert-banner" style="display:none;">
+    <div class="alert-content">
+      <div class="alert-pulse-icon">🚨</div>
+      <div class="alert-text">
+        <div class="alert-title">¡CINEMÓMETRO PRÓXIMO DETECTADO!</div>
+        <div class="alert-desc" id="alertDesc">Radar fijo en A-1 PK 24.5 a 850 metros</div>
+      </div>
+    </div>
+    <button id="dismissAlertBtn" class="alert-close-btn" title="Ocultar aviso">&times;</button>
+  </aside>
+
+  <!-- Panel de Control y Filtros -->
+  <section class="filters-container">
+    <!-- Píldoras de Filtros Rápidos -->
+    <div class="category-pills-bar">
+      <button class="cat-pill active" data-cat="all">🌟 Todos (737)</button>
+      <button class="cat-pill" data-cat="fijos">📸 Fijos en Cabina / Pórtico (690)</button>
+      <button class="cat-pill" data-cat="tramos">📏 Tramos de Velocidad Media (47)</button>
+      <button class="cat-pill" data-cat="radiales">🛣️ Radiales A-1 a A-8</button>
+      <button class="cat-pill" data-cat="circunvalacion">⭕ Circunvalaciones (M-40, M-50, etc.)</button>
+      <button class="cat-pill" data-cat="puertos">🏔️ Puertos de Montaña</button>
+      <button class="cat-pill" data-cat="madrid">🏙️ Madrid</button>
+      <button class="cat-pill" data-cat="andalucia">☀️ Andalucía</button>
+      <button class="cat-pill" data-cat="norte">🌲 Cornisa Cantábrica</button>
+    </div>
+
+    <!-- Barra de Búsqueda y Selectores -->
+    <div class="search-inputs-bar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Buscar vía (ej. A-2), provincia, sentido o PK..." autocomplete="off">
+        <button id="clearSearchBtn" class="clear-btn" style="display:none;" title="Borrar búsqueda">×</button>
+      </div>
+
+      <div class="select-group">
+        <select id="provSelect" title="Filtrar por Provincia">
+          <option value="all">Todas las Provincias</option>
+        </select>
+
+        <select id="roadSelect" title="Filtrar por Carretera">
+          <option value="all">Todas las Carreteras</option>
+        </select>
+
+        <select id="sortSelect" title="Criterio de Ordenación">
+          <option value="proximity">Proximidad (WASM)</option>
+          <option value="road-pk" selected>Vía + PK</option>
+          <option value="pk-asc">PK Ascendente</option>
+          <option value="pk-desc">PK Descendente</option>
+        </select>
+
+        <select id="alertRadiusSelect" title="Radio de aviso sonoro y visual">
+          <option value="1">Alerta: &lt; 1 km</option>
+          <option value="2.5" selected>Alerta: &lt; 2.5 km</option>
+          <option value="5">Alerta: &lt; 5 km</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Estado de carga -->
+  <div id="loadingBox" class="loading-state">
+    <div class="spinner"></div>
+    <p id="loadingMsg">Cargando base de datos oficial de cinemómetros DGT y motor Rust WebAssembly...</p>
+  </div>
+
+  <!-- Vista 1: Mapa Interactivo Geo-referenciado con Tramos y Fijos (Por defecto) -->
+  <main id="mapView" class="map-view-container">
+    <div id="mapContainer"></div>
+  </main>
+
+  <!-- Vista 2: Catálogo de Fichas de Radares -->
+  <main id="gridView" class="grid-view-container" style="display:none;">
+    <div class="radar-grid" id="radarGrid"></div>
+    
+    <div id="loadMoreBox" class="load-more-box" style="display:none;">
+      <button id="loadMoreBtn" class="action-pill-btn">Cargar más radares...</button>
+      <span class="load-more-info" id="loadMoreInfo"></span>
+    </div>
+  </main>
+
+  <!-- Modal de Detalle de Cinemómetro -->
+  <div id="radarModal" class="radar-modal" style="display:none;">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="radar-type-badge" id="modalTypeBadge">RADAR FIJO</span>
+          <span class="cam-badge-road" id="modalRoad">A-1</span>
+          <span class="cam-badge-pk" id="modalPk">PK 24.5</span>
+        </div>
+        <button id="modalCloseBtn" class="modal-close-btn" title="Cerrar modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-radar-card">
+          <div class="modal-radar-icon-box" id="modalIconBox">📸</div>
+          <div class="modal-radar-details">
+            <h3 id="modalTitle">Cinemómetro en Cabina / Arcén</h3>
+            <p id="modalDirText">Sentido: Creciente (+)</p>
+            <p id="modalProvText">Provincia: MADRID</p>
+            <p id="modalDistText" class="modal-dist-highlight">Distancia a ti: Calculando...</p>
+          </div>
+        </div>
+        <div class="modal-extra-info">
+          <div class="info-row">
+            <span class="info-label">Identificador DGT:</span>
+            <span class="info-value" id="modalId">CABINA_1234</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Coordenadas GPS:</span>
+            <span class="info-value" id="modalCoords">40.4168, -3.7038</span>
+          </div>
+          <div class="info-row" id="modalTramoInfoRow" style="display:none;">
+            <span class="info-label">Fin de tramo:</span>
+            <span class="info-value" id="modalTramoEnd">40.4500, -3.7200</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modalLocateBtn" class="action-pill-btn">🗺️ Centrar en Mapa</button>
+        <a id="modalMapsLink" href="#" target="_blank" rel="noopener noreferrer" class="link-btn">Abrir en Google Maps ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="radares.js"></script>
+</body>
+</html>

@@ -94,12 +94,20 @@ javiergalilea/
 │   ├── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │   └── agent/            # Agente local Python opcional L2/L3 (javier_lan_agent.py)
 │
-└── pr_camaras/           # [Subproyecto 12: Cámaras DGT en Tiempo Real (WASM)]
-    ├── index.html        # Visor de 1.977 cámaras, modos Muro y Mapa interactivo
-    ├── camaras.css       # Interfaz Cyber Dark, tarjetas con imagen en directo y modales HD
-    ├── camaras.js        # Integración Leaflet, filtros radiales/puertos, auto-refresco y WASM
-    ├── camaras.json      # Base de datos oficial de cámaras DGT georreferenciadas
-    ├── engine.wasm       # Motor de cálculo geodésico y ordenación por proximidad (1.515 B)
+├── pr_camaras/           # [Subproyecto 12: Cámaras DGT en Tiempo Real (WASM)]
+│   ├── index.html        # Visor de 1.977 cámaras, modos Muro y Mapa interactivo
+│   ├── camaras.css       # Interfaz Cyber Dark, tarjetas con imagen en directo y modales HD
+│   ├── camaras.js        # Integración Leaflet, filtros radiales/puertos, auto-refresco y WASM
+│   ├── camaras.json      # Base de datos oficial de cámaras DGT georreferenciadas
+│   ├── engine.wasm       # Motor de cálculo geodésico y ordenación por proximidad (1.515 B)
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_radares/           # [Subproyecto 13: Radares DGT & Cinemómetros (WASM)]
+    ├── index.html        # Mapa interactivo y catálogo de 737 cinemómetros (fijos y tramos)
+    ├── radares.css       # Interfaz Cyber Dark, trazados de tramos, banner HUD y modales
+    ├── radares.js        # Avisador acústico/visual, integración Leaflet, filtros y WASM
+    ├── radares.json      # Base de datos oficial de cinemómetros DGT georreferenciados
+    ├── engine.wasm       # Motor de detección de proximidad y ordenación espacial (1.843 B)
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 

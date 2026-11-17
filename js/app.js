@@ -867,6 +867,117 @@
     requestAnimationFrame(draw);
   }
 
+  // Miniatura 13: Radares DGT & Cinemómetros
+  function initThumbRadares() {
+    const canvas = document.getElementById('thumbRadares');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w = (canvas.width = canvas.offsetWidth || 300);
+    let h = (canvas.height = canvas.offsetHeight || 160);
+
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const maxR = Math.min(w, h) * 0.42;
+
+    const blips = [
+      { angle: 0.6, dist: 0.38, type: 'fijo' },
+      { angle: 1.8, dist: 0.65, type: 'tramo' },
+      { angle: 3.4, dist: 0.82, type: 'fijo' },
+      { angle: 4.9, dist: 0.52, type: 'fijo' }
+    ];
+
+    let sweepAngle = 0;
+    function draw() {
+      sweepAngle += 0.045;
+      if (sweepAngle > Math.PI * 2) sweepAngle -= Math.PI * 2;
+
+      ctx.fillStyle = '#080a12';
+      ctx.fillRect(0, 0, w, h);
+
+      // Círculos concéntricos de radar
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.2)';
+      ctx.lineWidth = 1;
+      for (let r = 1; r <= 3; r++) {
+        ctx.beginPath();
+        ctx.arc(cx, cy, (maxR / 3) * r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Ejes en cruz
+      ctx.beginPath();
+      ctx.moveTo(cx - maxR, cy); ctx.lineTo(cx + maxR, cy);
+      ctx.moveTo(cx, cy - maxR); ctx.lineTo(cx, cy + maxR);
+      ctx.stroke();
+
+      // Haz rotatorio de escaneo
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+      grad.addColorStop(0, 'rgba(239, 68, 68, 0.35)');
+      grad.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, maxR, sweepAngle - 0.45, sweepAngle);
+      ctx.closePath();
+      ctx.fill();
+
+      // Línea frontal de barrido
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(sweepAngle) * maxR, cy + Math.sin(sweepAngle) * maxR);
+      ctx.stroke();
+
+      // Blips / Ecos de radares detectados
+      blips.forEach(b => {
+        const bx = cx + Math.cos(b.angle) * (b.dist * maxR);
+        const by = cy + Math.sin(b.angle) * (b.dist * maxR);
+
+        let diff = (sweepAngle - b.angle + Math.PI * 2) % (Math.PI * 2);
+        let alpha = diff < 1.2 ? 1 - diff / 1.2 : 0.2;
+
+        const color = b.type === 'fijo' ? `rgba(239, 68, 68, ${alpha})` : `rgba(245, 158, 11, ${alpha})`;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(bx, by, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (diff < 0.3) {
+          ctx.strokeStyle = color;
+          ctx.beginPath();
+          ctx.arc(bx, by, 7, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      });
+
+      // Centro del radar (usuario)
+      ctx.fillStyle = '#00f5d4';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Señal de velocidad 120 en esquina
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(w - 24, 24, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.fillStyle = '#000000';
+      ctx.font = '800 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('120', w - 24, 25);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -881,4 +992,5 @@
   initThumbVisor3d();
   initThumbNetPing();
   initThumbCamaras();
+  initThumbRadares();
 })();
