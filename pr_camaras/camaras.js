@@ -34,6 +34,8 @@
   // Mapa Leaflet
   let map = null;
   let mapMarkersLayer = null;
+  let userMarker = null;
+  let userAccuracyCircle = null;
   let mapInitialized = false;
 
   // Elementos DOM
@@ -498,10 +500,73 @@
       mapMarkersLayer.addLayer(marker);
     });
 
+    // Pintar marcador y círculo de radar del usuario si está activo
+    drawUserPositionMarker();
+
     if (camerasToShow.length > 0 && currentCategory !== 'all') {
       const bounds = L.latLngBounds(camerasToShow.map(c => [c.lat, c.lng]));
+      if (userCoords) bounds.extend([userCoords.lat, userCoords.lng]);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
     }
+  }
+
+  // Dibujar posición GPS del usuario con efecto Neón / Radar
+  function drawUserPositionMarker() {
+    if (!map || !userCoords) return;
+
+    if (userMarker) {
+      map.removeLayer(userMarker);
+      userMarker = null;
+    }
+    if (userAccuracyCircle) {
+      map.removeLayer(userAccuracyCircle);
+      userAccuracyCircle = null;
+    }
+
+    const accuracyRadius = Math.max(150, Math.min(userCoords.accuracy || 1200, 4000));
+
+    // Círculo de cobertura/radar
+    userAccuracyCircle = L.circle([userCoords.lat, userCoords.lng], {
+      radius: accuracyRadius,
+      color: '#00f5d4',
+      fillColor: '#00f5d4',
+      fillOpacity: 0.1,
+      weight: 1.5,
+      dashArray: '4, 6'
+    }).addTo(map);
+
+    // Baliza pulsante neón
+    const userIcon = L.divIcon({
+      className: 'user-location-marker',
+      html: `
+        <div class="user-pulse-beacon">
+          <div class="pulse-ring"></div>
+          <div class="pulse-dot"></div>
+        </div>
+      `,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18],
+      popupAnchor: [0, -18]
+    });
+
+    userMarker = L.marker([userCoords.lat, userCoords.lng], {
+      icon: userIcon,
+      zIndexOffset: 1500
+    }).addTo(map);
+
+    userMarker.bindPopup(`
+      <div class="map-popup-card" style="width: 220px; text-align: center;">
+        <div class="map-popup-header" style="justify-content: center; margin-bottom: 0.35rem;">
+          <strong style="color: #00f5d4; font-size: 0.95rem;">📍 Tu Ubicación Actual</strong>
+        </div>
+        <p style="font-size: 0.78rem; color: #94a3b8; margin: 0.2rem 0;">
+          Lat: ${userCoords.lat.toFixed(4)} · Lng: ${userCoords.lng.toFixed(4)}
+        </p>
+        <div style="font-size: 0.74rem; color: #00f5d4; font-weight: 600; margin-top: 0.35rem;">
+          Cámaras DGT ordenadas por distancia (Rust WASM)
+        </div>
+      </div>
+    `);
   }
 
   // Refrescar todas las imágenes incrementando el timestamp de caché
@@ -535,7 +600,8 @@
       pos => {
         userCoords = {
           lat: pos.coords.latitude,
-          lng: pos.coords.longitude
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy || 1200
         };
         geoBtn.innerHTML = '<span>📍 Cerca de Mí (Activo)</span>';
         geoBtn.style.background = 'rgba(0, 245, 212, 0.3)';
@@ -544,7 +610,9 @@
         applyFilters();
 
         if (mapInitialized && map) {
-          map.setView([userCoords.lat, userCoords.lng], 10);
+          drawUserPositionMarker();
+          map.flyTo([userCoords.lat, userCoords.lng], 11, { duration: 1.2 });
+          if (userMarker) setTimeout(() => userMarker.openPopup(), 1250);
         }
       },
       err => {
@@ -577,6 +645,13 @@
       } else {
         setTimeout(() => map.invalidateSize(), 150);
         updateMapMarkers();
+      }
+
+      if (userCoords && map) {
+        setTimeout(() => {
+          map.setView([userCoords.lat, userCoords.lng], 11);
+          if (userMarker) userMarker.openPopup();
+        }, 220);
       }
     });
 
