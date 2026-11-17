@@ -592,6 +592,39 @@ html, body {
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8) !important;
 }
 
+/* Selector de Capas Leaflet (Modo Oscuro / Satélite) */
+.leaflet-control-layers {
+  background: rgba(13, 17, 26, 0.92) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border-hover) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.75) !important;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.5rem 0.8rem !important;
+}
+
+.leaflet-control-layers-toggle {
+  background-color: rgba(13, 17, 26, 0.92) !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--glass-border-hover) !important;
+}
+
+.leaflet-control-layers-base label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  margin-bottom: 0.35rem;
+}
+
+.leaflet-control-layers-base label:last-child {
+  margin-bottom: 0;
+}
+
 .leaflet-popup-tip {
   background: rgba(13, 17, 26, 0.95) !important;
   border-color: var(--glass-border-hover) !important;

@@ -415,23 +415,47 @@
     }
   }
 
-  // Inicializar Mapa Leaflet con CartoDB Dark Matter
+  const CARTO_API_KEY = 'cb1_573d_1_8c20f8aa768b764e7c67f1c8';
+
+  // Inicializar Mapa Leaflet con CartoDB Dark Matter y Satélite HD
   function initMap() {
     if (mapInitialized) return;
 
     map = L.map('mapContainer', {
       center: [40.4168, -3.7038], // Madrid / Centro de la Península
       zoom: 6,
+      minZoom: 4,
+      maxZoom: 21,
       zoomControl: true,
       preferCanvas: true
     });
 
-    // Capa base CartoDB Dark Matter (mismo estilo que pr_tracks)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a> · Datos: DGT',
-      subdomains: 'abcd',
-      maxZoom: 19
-    }).addTo(map);
+    const baseLayers = {
+      '🌃 Modo Oscuro (Carto HD)': L.tileLayer(
+        `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png?key=${CARTO_API_KEY}`,
+        {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a> · DGT',
+          subdomains: 'abcd',
+          maxNativeZoom: 20,
+          maxZoom: 21
+        }
+      ),
+      '🛰️ Satélite HD (Carreteras)': L.tileLayer(
+        'https://{s}.google.com/vt/lyrs=y&hl=es&x={x}&y={y}&z={z}',
+        {
+          attribution: '&copy; Google Satellite HD &copy; OpenStreetMap · DGT',
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          maxNativeZoom: 20,
+          maxZoom: 21
+        }
+      )
+    };
+
+    // Añadir capa oscura por defecto con la clave autorizada de CARTO
+    baseLayers['🌃 Modo Oscuro (Carto HD)'].addTo(map);
+
+    // Selector de capas interactivo en el mapa
+    L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
     mapMarkersLayer = L.layerGroup().addTo(map);
     mapInitialized = true;
