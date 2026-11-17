@@ -11,6 +11,7 @@ members = [
   "pr_tracks/engine",
   "pr_visor3d/engine",
   "pr_red/engine",
+  "pr_camaras/engine",
 ]
 resolver = "2"
 

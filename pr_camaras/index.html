@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cámaras DGT en Tiempo Real — Javier Galilea</title>
+  <meta name="description" content="Visor en tiempo real de las casi 2.000 cámaras de tráfico de la Dirección General de Tráfico (DGT) en autopistas, autovías y puertos de montaña de España. Motor de indexación espacial en Rust WebAssembly.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_camaras/">
+  <meta name="theme-color" content="#06080e">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
+
+  <!-- Leaflet para el modo Mapa Interactivo -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="camaras.css">
+</head>
+<body>
+  <!-- Fondo dinámico sutil -->
+  <div class="ambient-bg">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <!-- Barra Superior Sticky -->
+  <header class="lab-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a la portada de javiergalilea.es">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>javiergalilea.es</span>
+      </a>
+      <div class="lab-title-group">
+        <span class="lab-badge">EXP #12 · RED VIAL DGT</span>
+        <h1>Cámaras de Tráfico en Vivo</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="telemetry-pills">
+        <span class="stat-pill"><strong id="counterSpan">0</strong> / 1.977 Cámaras</span>
+        <span class="stat-pill wasm-pill" id="wasmStatusPill" title="Motor de cálculo geodésico y proximidad en WebAssembly">
+          <span class="status-dot online"></span>
+          <span>Rust WASM</span>
+        </span>
+      </div>
+
+      <!-- Selector de Modo de Vista: Muro vs Mapa -->
+      <div class="view-switch-group">
+        <button id="viewGridBtn" class="switch-btn active" title="Ver en cuadrícula de fotos">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Muro</span>
+        </button>
+        <button id="viewMapBtn" class="switch-btn" title="Ver en mapa interactivo de carreteras">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+          <span>Mapa</span>
+        </button>
+      </div>
+
+      <!-- Acciones rápidas -->
+      <button id="geoBtn" class="action-pill-btn" title="Ordenar por proximidad a tu ubicación actual con Rust WASM">
+        <span>📍 Cerca de Mí</span>
+      </button>
+
+      <button id="refreshBtn" class="icon-btn" title="Refrescar imágenes de cámaras ahora">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/>
+        </svg>
+      </button>
+
+      <button id="fullscreenBtn" class="icon-btn" title="Pantalla completa">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Panel de Control y Filtros -->
+  <section class="filters-container">
+    <!-- Píldoras de Filtros Rápidos / Temáticos -->
+    <div class="category-pills-bar">
+      <button class="cat-pill active" data-cat="all">🌟 Todas (1.977)</button>
+      <button class="cat-pill" data-cat="radiales">🛣️ Radiales A-1 a A-8</button>
+      <button class="cat-pill" data-cat="circunvalacion">⭕ Circunvalaciones (M-40, M-50, etc.)</button>
+      <button class="cat-pill" data-cat="puertos">🏔️ Puertos y Nieve</button>
+      <button class="cat-pill" data-cat="madrid">🏙️ Comunidad de Madrid</button>
+      <button class="cat-pill" data-cat="norte">🌲 Cornisa Cantábrica</button>
+      <button class="cat-pill" data-cat="sur">☀️ Andalucía y Sur</button>
+      <button class="cat-pill" data-cat="mediterraneo">🌊 Eje Mediterráneo (A-7)</button>
+    </div>
+
+    <!-- Barra de Búsqueda y Selectores Avanzados -->
+    <div class="search-inputs-bar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Buscar vía (ej. A-6), puerto, municipio, sentido o PK..." autocomplete="off">
+        <button id="clearSearchBtn" class="clear-btn" style="display:none;" title="Borrar búsqueda">×</button>
+      </div>
+
+      <div class="select-group">
+        <select id="provSelect" title="Filtrar por Provincia">
+          <option value="all">Todas las Provincias</option>
+        </select>
+
+        <select id="roadSelect" title="Filtrar por Vía Principal">
+          <option value="all">Todas las Carreteras</option>
+        </select>
+
+        <select id="sortSelect" title="Criterio de Ordenación">
+          <option value="road-pk">Ordenar: Vía + PK</option>
+          <option value="pk-asc">PK Ascendente</option>
+          <option value="pk-desc">PK Descendente</option>
+          <option value="proximity">Proximidad (WASM)</option>
+        </select>
+
+        <select id="refreshRateSelect" title="Intervalo de Auto-Refresco">
+          <option value="60000">Auto: 1 min</option>
+          <option value="120000" selected>Auto: 2 min</option>
+          <option value="300000">Auto: 5 min</option>
+          <option value="0">Auto: Desactivado</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- Estado de carga -->
+  <div id="loadingBox" class="loading-state">
+    <div class="spinner"></div>
+    <p id="loadingMsg">Cargando base de datos oficial de cámaras DGT y módulo Rust WebAssembly...</p>
+  </div>
+
+  <!-- Vista 1: Muro de Cámaras en Cuadrícula -->
+  <main id="gridView" class="grid-view-container">
+    <div class="cam-grid" id="camGrid"></div>
+    
+    <div id="loadMoreBox" class="load-more-box" style="display:none;">
+      <button id="loadMoreBtn" class="action-pill-btn">Cargar más cámaras...</button>
+      <span class="load-more-info" id="loadMoreInfo"></span>
+    </div>
+  </main>
+
+  <!-- Vista 2: Mapa Interactivo Geo-referenciado -->
+  <main id="mapView" class="map-view-container" style="display:none;">
+    <div id="mapContainer"></div>
+  </main>
+
+  <!-- Modal de Cámara Ampliada con Refresco en Vivo -->
+  <div id="camModal" class="cam-modal" style="display:none;">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="cam-badge-road" id="modalRoad">A-1</span>
+          <span class="cam-badge-pk" id="modalPk">PK 76.5</span>
+          <span class="cam-badge-prov" id="modalProv">MADRID</span>
+        </div>
+        <button id="modalCloseBtn" class="modal-close-btn" title="Cerrar modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-img-wrapper">
+          <img id="modalImg" src="" alt="Cámara de tráfico en directo">
+          <div class="modal-img-overlay">
+            <span id="modalDest">Sentido: BURGOS</span>
+            <span id="modalCountdown">Próximo refresco en: <strong>120s</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-meta-info" id="modalCoords">
+          <span>Lat: 40.8521 · Lng: -3.6120</span>
+        </div>
+        <div class="modal-actions">
+          <button id="modalRefreshBtn" class="action-pill-btn">🔄 Refrescar Foto</button>
+          <a id="modalOpenDirectBtn" href="#" target="_blank" rel="noopener noreferrer" class="link-btn">Abrir Fotograma DGT</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="camaras.js"></script>
+</body>
+</html>

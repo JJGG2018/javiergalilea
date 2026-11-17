@@ -776,6 +776,97 @@
     requestAnimationFrame(draw);
   }
 
+  // Miniatura 12: Cámaras DGT en Tiempo Real
+  function initThumbCamaras() {
+    const canvas = document.getElementById('thumbCamaras');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w = (canvas.width = canvas.offsetWidth || 300);
+    let h = (canvas.height = canvas.offsetHeight || 160);
+
+    let t = 0;
+    function draw() {
+      t += 0.025;
+      ctx.fillStyle = '#0a0d16';
+      ctx.fillRect(0, 0, w, h);
+
+      // Perspectiva de carretera estilizada con líneas de fuga
+      const horizonY = h * 0.42;
+      const vanishX = w * 0.5;
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, horizonY);
+      ctx.lineTo(w, horizonY);
+      ctx.stroke();
+
+      // Bordes de la calzada
+      ctx.strokeStyle = 'rgba(0, 245, 212, 0.35)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(vanishX - 10, horizonY);
+      ctx.lineTo(w * 0.08, h);
+      ctx.moveTo(vanishX + 10, horizonY);
+      ctx.lineTo(w * 0.92, h);
+      ctx.stroke();
+
+      // Línea discontinua central de la autovía
+      ctx.strokeStyle = '#00f5d4';
+      ctx.lineWidth = 2.2;
+      const dashes = 6;
+      for (let i = 0; i < dashes; i++) {
+        const offset = ((i / dashes) + (t * 0.6)) % 1;
+        const y1 = horizonY + offset * offset * (h - horizonY);
+        const y2 = horizonY + Math.min(1, offset + 0.09) * Math.min(1, offset + 0.09) * (h - horizonY);
+        const x1 = vanishX;
+        const x2 = vanishX;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+
+      // Cuadro delimitador de visor de cámara (CCTV / DGT)
+      const bx = w * 0.16;
+      const by = h * 0.15;
+      const bw = w * 0.68;
+      const bh = h * 0.72;
+
+      ctx.strokeStyle = 'rgba(59, 130, 246, 0.45)';
+      ctx.lineWidth = 1;
+      const corner = 10;
+      // Esquinas de visor HUD
+      ctx.beginPath();
+      ctx.moveTo(bx, by + corner); ctx.lineTo(bx, by); ctx.lineTo(bx + corner, by);
+      ctx.moveTo(bx + bw - corner, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + corner);
+      ctx.moveTo(bx + bw, by + bh - corner); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw - corner, by + bh);
+      ctx.moveTo(bx + corner, by + bh); ctx.lineTo(bx, by + bh); ctx.lineTo(bx, by + bh - corner);
+      ctx.stroke();
+
+      // Punto rojo REC / LIVE parpadeante
+      const blink = Math.sin(t * 5) > 0;
+      ctx.fillStyle = blink ? '#ef4444' : 'rgba(239, 68, 68, 0.2)';
+      ctx.beginPath();
+      ctx.arc(bx + 12, by + 12, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '700 8.5px ui-monospace, monospace';
+      ctx.fillText('LIVE DGT', bx + 20, by + 15);
+
+      // Distintivo de Autovía y PK
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(bx + bw - 68, by + 6, 60, 14);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 9px ui-monospace, monospace';
+      ctx.fillText('A-1 · PK 76', bx + bw - 64, by + 17);
+
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -789,4 +880,5 @@
   initThumbTracks();
   initThumbVisor3d();
   initThumbNetPing();
+  initThumbCamaras();
 })();

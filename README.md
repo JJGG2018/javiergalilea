@@ -86,13 +86,21 @@ javiergalilea/
 │   ├── engine.wasm       # Motor geométrico (AABB, área, volumen, cámara auto/manual) en Rust WASM
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_red/               # [Subproyecto 11: Escáner de Red, Ping & Identificador LAN (WASM)]
-    ├── index.html        # Radar topológico, osciloscopio ping, inventario e inspector de red
-    ├── red.css           # Interfaz Cyber Dark responsive y modales de agente/importación
-    ├── red.js            # Sonda Web, parser arp/nmap, radar topológico e integración WASM
-    ├── engine.wasm       # Motor CIDR, métricas ping/jitter RFC3550 y base OUI en Rust WASM
-    ├── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
-    └── agent/            # Agente local Python opcional L2/L3 (javier_lan_agent.py)
+├── pr_red/               # [Subproyecto 11: Escáner de Red, Ping & Identificador LAN (WASM)]
+│   ├── index.html        # Radar topológico, osciloscopio ping, inventario e inspector de red
+│   ├── red.css           # Interfaz Cyber Dark responsive y modales de agente/importación
+│   ├── red.js            # Sonda Web, parser arp/nmap, radar topológico e integración WASM
+│   ├── engine.wasm       # Motor CIDR, métricas ping/jitter RFC3550 y base OUI en Rust WASM
+│   ├── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│   └── agent/            # Agente local Python opcional L2/L3 (javier_lan_agent.py)
+│
+└── pr_camaras/           # [Subproyecto 12: Cámaras DGT en Tiempo Real (WASM)]
+    ├── index.html        # Visor de 1.977 cámaras, modos Muro y Mapa interactivo
+    ├── camaras.css       # Interfaz Cyber Dark, tarjetas con imagen en directo y modales HD
+    ├── camaras.js        # Integración Leaflet, filtros radiales/puertos, auto-refresco y WASM
+    ├── camaras.json      # Base de datos oficial de cámaras DGT georreferenciadas
+    ├── engine.wasm       # Motor de cálculo geodésico y ordenación por proximidad (1.515 B)
+    └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 
 ---
