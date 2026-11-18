@@ -1206,8 +1206,106 @@
     });
   }
 
+  // --- 11. INSTALACIÓN COMO APP (PWA + SERVICE WORKER OFFLINE) ---
+  function initPwaInstall() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(err => {
+        console.warn('Service Worker no registrado:', err);
+      });
+    }
+
+    const installAppBtn = document.getElementById('installAppBtn');
+    const installModal = document.getElementById('installModal');
+    const installModalBackdrop = document.getElementById('installModalBackdrop');
+    const installModalCloseBtn = document.getElementById('installModalCloseBtn');
+    const installModalBody = document.getElementById('installModalBody');
+
+    if (!installAppBtn || !installModal) return;
+
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+
+    if (isStandalone) {
+      installAppBtn.style.display = 'none';
+      return;
+    }
+
+    let deferredPrompt = null;
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // En iOS/iPadOS Safari no existe beforeinstallprompt, mostramos el botón con guía directa
+    if (isIos) {
+      installAppBtn.style.display = 'inline-flex';
+    }
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installAppBtn.style.display = 'inline-flex';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      installAppBtn.style.display = 'none';
+      installModal.style.display = 'none';
+    });
+
+    function openInstallGuide() {
+      if (isIos) {
+        installModalBody.innerHTML = `
+          <div class="install-step">
+            <span class="install-step-num">1</span>
+            <div>Pulsa el botón <strong>Compartir</strong> (cuadrado con flecha hacia arriba ⬆️) en la barra de Safari.</div>
+          </div>
+          <div class="install-step">
+            <span class="install-step-num">2</span>
+            <div>Desliza hacia abajo y toca <strong>«Añadir a pantalla de inicio»</strong> (o «Agregar a inicio»).</div>
+          </div>
+          <div class="install-step">
+            <span class="install-step-num">3</span>
+            <div>Ábrela desde el nuevo icono en tu iPhone o iPad: funcionará a pantalla completa e incluso sin cobertura.</div>
+          </div>
+        `;
+      } else {
+        installModalBody.innerHTML = `
+          <div class="install-step">
+            <span class="install-step-num">1</span>
+            <div>Abre el menú del navegador (<strong>⋮</strong> en Chrome/Android o barra de direcciones en escritorio).</div>
+          </div>
+          <div class="install-step">
+            <span class="install-step-num">2</span>
+            <div>Selecciona <strong>«Instalar aplicación»</strong> o <strong>«Añadir a pantalla de inicio»</strong>.</div>
+          </div>
+        `;
+      }
+      installModal.style.display = 'flex';
+    }
+
+    installAppBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice && choice.outcome === 'accepted') {
+          installAppBtn.style.display = 'none';
+        }
+        deferredPrompt = null;
+      } else {
+        openInstallGuide();
+      }
+    });
+
+    const closeInstallModal = () => {
+      installModal.style.display = 'none';
+    };
+    if (installModalBackdrop) installModalBackdrop.addEventListener('click', closeInstallModal);
+    if (installModalCloseBtn) installModalCloseBtn.addEventListener('click', closeInstallModal);
+  }
+
   // Arranque
   setupEvents();
+  initPwaInstall();
   drawSonarFrame();
   initWasm().then(loadRadars);
 })();

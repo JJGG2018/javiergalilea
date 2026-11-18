@@ -1102,3 +1102,132 @@ body.state-danger .nearest-radar-card {
     min-height: 40px;
   }
 }
+
+/* Botón y Modal de Instalación PWA */
+.install-app-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: linear-gradient(135deg, rgba(0, 245, 212, 0.2), rgba(59, 130, 246, 0.25));
+  border: 1px solid rgba(0, 245, 212, 0.55);
+  color: #ffffff;
+  padding: 0.38rem 0.78rem;
+  border-radius: 100px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.install-app-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px rgba(0, 245, 212, 0.35);
+}
+
+.install-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+}
+
+.install-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.install-modal-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(13, 18, 30, 0.96);
+  border: 1px solid rgba(0, 245, 212, 0.45);
+  border-radius: 22px;
+  padding: 1.2rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+}
+
+.install-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.install-modal-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.install-modal-brand img {
+  border-radius: 12px;
+}
+
+.install-modal-brand h3 {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.install-modal-brand p {
+  font-size: 0.76rem;
+  color: var(--cyan);
+}
+
+.install-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.install-modal-body {
+  padding-top: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+}
+
+.install-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+}
+
+.install-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 245, 212, 0.18);
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.install-step strong {
+  color: var(--text-primary);
+}
+
