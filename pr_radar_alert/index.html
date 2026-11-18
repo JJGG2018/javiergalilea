@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Radar Alert Móvil & Tablet — Javier Galilea</title>
+  <meta name="description" content="Avisador de radares DGT y velocímetro GPS en tiempo real optimizado para móvil y tablet. Alertas visuales, sonoras y por voz de radares cercanos y exceso de velocidad con motor Rust WASM.">
+  <link rel="canonical" href="https://javiergalilea.es/pr_radar_alert/">
+  <meta name="theme-color" content="#05070d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
+
+  <!-- Leaflet para modo Mapa Live -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="radar_alert.css">
+</head>
+<body class="state-idle">
+  <!-- Resplandor ambiental de estado (verde/cian, ámbar o rojo) -->
+  <div class="alert-screen-glow" id="screenGlow"></div>
+
+  <!-- Barra Superior Compacta -->
+  <header class="hud-topbar">
+    <div class="topbar-left">
+      <a href="../" class="back-btn" title="Volver a javiergalilea.es">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span class="back-label">javiergalilea.es</span>
+      </a>
+      <div class="title-block">
+        <span class="exp-badge">EXP #14 · RADAR ALERT</span>
+        <h1>Copiloto de Radares &amp; Velocidad</h1>
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <span class="status-pill gps-pill" id="gpsStatusPill">
+        <span class="status-dot" id="gpsDot"></span>
+        <span id="gpsStatusText">GPS en espera</span>
+      </span>
+      <span class="status-pill wake-pill" id="wakePill" title="Mantener pantalla encendida durante la conducción" style="display:none;">
+        <span>🔆 Pantalla Activa</span>
+      </span>
+      <span class="status-pill wasm-pill" id="wasmPill" title="Motor geodésico y direccional Rust WASM">
+        <span class="status-dot online"></span>
+        <span>WASM</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- Barra de Control Demo (visible cuando el simulador de ruta está activo) -->
+  <section class="demo-bar" id="demoBar" style="display:none;">
+    <div class="demo-bar-left">
+      <span class="demo-tag">🚗 MODO DEMO EN RUTA</span>
+      <select id="demoRouteSelect" aria-label="Seleccionar corredor de prueba">
+        <option value="a1">A-1 Madrid Norte (límite 90 / 120)</option>
+        <option value="m40">M-40 Madrid (circunvalación)</option>
+        <option value="a7">A-7 Málaga Costa del Sol (con tramo)</option>
+        <option value="z40">Z-40 Zaragoza (con radar de tramo)</option>
+      </select>
+    </div>
+    <div class="demo-bar-right">
+      <label for="demoSpeedSlider" class="demo-speed-label">
+        Velocidad simulada: <strong id="demoSpeedReadout">95 km/h</strong>
+      </label>
+      <input type="range" id="demoSpeedSlider" min="0" max="160" step="5" value="95">
+    </div>
+  </section>
+
+  <!-- Contenido Principal del Cockpit (optimizado para móvil y tableta) -->
+  <main class="cockpit-main" id="cockpitMain">
+    <!-- Columna Izquierda: Velocímetro + Límite + Tarjeta de Alerta de Radar Más Cercano -->
+    <section class="hud-primary-col">
+      <!-- Tarjeta Principal: Velocímetro + Señal R-301 -->
+      <div class="speed-hud-card" id="speedHudCard">
+        <div class="speedometer-wrap">
+          <svg class="speed-gauge-svg" viewBox="0 0 240 200" aria-hidden="true">
+            <defs>
+              <linearGradient id="gaugeGradSafe" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#00f5d4"/>
+                <stop offset="100%" stop-color="#3b82f6"/>
+              </linearGradient>
+              <linearGradient id="gaugeGradCaution" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#f59e0b"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+              </linearGradient>
+              <linearGradient id="gaugeGradDanger" x1="0%" y1="100%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#ef4444"/>
+                <stop offset="100%" stop-color="#f43f5e"/>
+              </linearGradient>
+            </defs>
+            <!-- Arco base -->
+            <path class="gauge-track" d="M 38 164 A 96 96 0 1 1 202 164" fill="none" stroke-width="14" stroke-linecap="round"/>
+            <!-- Arco de progreso dinámico -->
+            <path class="gauge-fill" id="gaugeFillArc" d="M 38 164 A 96 96 0 1 1 202 164" fill="none" stroke-width="14" stroke-linecap="round" stroke="url(#gaugeGradSafe)"/>
+          </svg>
+
+          <div class="speed-readout">
+            <div class="speed-number" id="speedNumber">0</div>
+            <div class="speed-unit">km/h</div>
+            <div class="speed-meta" id="speedMeta">
+              <span id="headingBadge">🧭 ---°</span>
+              <span id="accuracyBadge">· GPS listo</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Señal Oficial DGT R-301 y Diferencial de Velocidad -->
+        <div class="limit-panel">
+          <span class="limit-caption" id="limitCaption">LÍMITE ACTIVO</span>
+          <div class="r301-sign" id="activeLimitSign">
+            <span id="activeLimitValue">120</span>
+          </div>
+          <div class="speed-delta-badge safe" id="speedDeltaBadge">
+            En espera
+          </div>
+        </div>
+      </div>
+
+      <!-- Tarjeta Protagonista: Radar Más Cercano y Barra de Aproximación -->
+      <div class="nearest-radar-card" id="nearestRadarCard">
+        <div class="nearest-top-row">
+          <div class="nearest-badges">
+            <span class="radar-kind-pill fixed" id="nearestKindPill">📡 BUSCANDO</span>
+            <span class="radar-road-pill" id="nearestRoadPill">DGT 737</span>
+            <span class="radar-pk-pill" id="nearestPkPill">PK --</span>
+          </div>
+          <div class="direction-chip" id="nearestDirectionChip" title="Posición relativa respecto a tu rumbo">
+            <span class="dir-arrow" id="nearestDirArrow">▲</span>
+            <span id="nearestDirText">RUMBO</span>
+          </div>
+        </div>
+
+        <div class="nearest-center-row">
+          <div class="nearest-dist-block">
+            <div class="nearest-dist-value" id="nearestDistValue">--</div>
+            <div class="nearest-dist-sub" id="nearestSubInfo">
+              Pulsa «Iniciar GPS» o «Demo Ruta» para comenzar
+            </div>
+          </div>
+          <div class="nearest-eta-block">
+            <span class="eta-label">TIEMPO EST.</span>
+            <span class="eta-value" id="nearestEtaValue">--</span>
+          </div>
+        </div>
+
+        <!-- Barra visual de acercamiento -->
+        <div class="approach-bar-track" aria-label="Proximidad al radar">
+          <div class="approach-bar-fill" id="approachBarFill" style="width: 0%;"></div>
+        </div>
+
+        <div class="nearest-footer-row" id="nearestFooterRow">
+          <span id="nearestProvDir">Base de datos oficial DGT · 690 fijos y 47 de tramo</span>
+          <span id="radarsInZoneCount">0 en radio</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Columna Derecha: Visor Táctico (Sonar / Mapa) + Cola de 5 Radares Más Cercanos -->
+    <section class="hud-secondary-col">
+      <!-- Visor Táctico Dual: Radar Sonar vs Mapa Live -->
+      <div class="tactical-card">
+        <div class="tactical-header">
+          <div class="tactical-tabs">
+            <button class="tac-tab active" id="tabSonarBtn">🎯 Radar Sonar</button>
+            <button class="tac-tab" id="tabMapBtn">🗺️ Mapa Live</button>
+          </div>
+          <div class="tactical-actions">
+            <button class="mini-pill-btn active" id="autoCenterBtn" title="Mantener el mapa centrado en tu vehículo">
+              🎯 Centrar
+            </button>
+            <span class="scope-range-badge" id="scopeRangeBadge">Radio 2.5 km</span>
+          </div>
+        </div>
+
+        <div class="tactical-stage">
+          <!-- Vista 1: Radar Sonar en tiempo real (Canvas 2D Heading-Up) -->
+          <div class="sonar-view" id="sonarView">
+            <canvas id="sonarCanvas"></canvas>
+            <div class="sonar-legend">
+              <span><i class="dot-fijo"></i> Fijo</span>
+              <span><i class="dot-tramo"></i> Tramo</span>
+              <span><i class="dot-cone"></i> Cono frontal</span>
+            </div>
+          </div>
+
+          <!-- Vista 2: Mapa Interactivo Leaflet -->
+          <div class="map-view" id="mapView" style="display:none;">
+            <div id="mapContainer"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cola en Tiempo Real de los 5 Radares Más Cercanos -->
+      <div class="nearby-list-card">
+        <div class="nearby-header">
+          <h2>📍 Radares Más Cercanos</h2>
+          <span class="nearby-subtitle" id="nearbyModeLabel">Prioridad: en tu sentido</span>
+        </div>
+        <ul class="nearby-list" id="nearbyList">
+          <li class="nearby-empty">
+            Activa el GPS o la Demo en Ruta para ver los 5 radares DGT más cercanos en vivo.
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <!-- Barra Inferior de Control Táctil (optimizada para pulgar en móvil y tablet) -->
+  <nav class="bottom-dock" aria-label="Controles de conducción">
+    <button class="dock-btn dock-primary" id="gpsToggleBtn">
+      <span class="dock-ico">📡</span>
+      <span class="dock-txt" id="gpsBtnText">Iniciar GPS</span>
+    </button>
+
+    <button class="dock-btn" id="demoToggleBtn" title="Probar el avisador simulando conducción real por España">
+      <span class="dock-ico">🚗</span>
+      <span class="dock-txt" id="demoBtnText">Demo Ruta</span>
+    </button>
+
+    <button class="dock-btn audio-voice" id="audioModeBtn" title="Cambiar modo de aviso: Voz + Pitidos / Solo Pitidos / Silencio">
+      <span class="dock-ico" id="audioModeIcon">🔊</span>
+      <span class="dock-txt" id="audioModeText">Voz + Pitidos</span>
+    </button>
+
+    <button class="dock-btn active-soft" id="coneFilterBtn" title="Alternar entre radares delante en tu sentido o todos los cercanos (360°)">
+      <span class="dock-ico" id="coneFilterIcon">🧭</span>
+      <span class="dock-txt" id="coneFilterText">Adelante</span>
+    </button>
+
+    <div class="dock-select-wrap" title="Distancia de anticipación de la alerta">
+      <select id="radiusSelect" aria-label="Radio de aviso">
+        <option value="1">1 km</option>
+        <option value="2.5" selected>2.5 km</option>
+        <option value="5">5 km</option>
+      </select>
+    </div>
+
+    <button class="dock-btn dock-icon-only" id="mirrorHudBtn" title="Modo Espejo HUD (para proyectar en el parabrisas de noche)">
+      <span>🪞</span>
+    </button>
+
+    <button class="dock-btn dock-icon-only" id="fullscreenBtn" title="Pantalla completa">
+      <span>⛶</span>
+    </button>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="radar_alert.js"></script>
+</body>
+</html>

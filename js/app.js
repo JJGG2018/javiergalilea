@@ -978,6 +978,86 @@
     requestAnimationFrame(draw);
   }
 
+  // Miniatura 14: Radar Alert Móvil & Tablet
+  function initThumbRadarAlert() {
+    const canvas = document.getElementById('thumbRadarAlert');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w = (canvas.width = canvas.offsetWidth || 300);
+    let h = (canvas.height = canvas.offsetHeight || 160);
+
+    let t = 0;
+    function draw() {
+      t += 0.035;
+      ctx.fillStyle = '#05070d';
+      ctx.fillRect(0, 0, w, h);
+
+      const speed = Math.round(112 + Math.sin(t * 0.9) * 18);
+      const overspeed = speed > 120;
+
+      // Arco velocímetro izquierdo
+      const gx = w * 0.34;
+      const gy = h * 0.56;
+      const r = Math.min(w, h) * 0.32;
+
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.arc(gx, gy, r, Math.PI * 0.78, Math.PI * 2.22);
+      ctx.stroke();
+
+      const frac = Math.min(1, speed / 180);
+      ctx.strokeStyle = overspeed ? '#ef4444' : '#00f5d4';
+      ctx.beginPath();
+      ctx.arc(gx, gy, r, Math.PI * 0.78, Math.PI * 0.78 + frac * Math.PI * 1.44);
+      ctx.stroke();
+
+      ctx.fillStyle = overspeed ? '#fecaca' : '#ffffff';
+      ctx.font = '900 24px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(speed), gx, gy - 2);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '700 8px ui-monospace, monospace';
+      ctx.fillText('KM/H', gx, gy + 16);
+
+      // Señal R-301 + distancia derecha
+      const rx = w * 0.74;
+      const ry = h * 0.36;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(rx, ry, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.fillStyle = '#09090b';
+      ctx.font = '900 13px sans-serif';
+      ctx.fillText('120', rx, ry + 1);
+
+      // Píldora distancia radar próximo
+      const distM = Math.max(120, Math.round(680 - ((t * 45) % 550)));
+      ctx.fillStyle = overspeed ? 'rgba(239,68,68,0.22)' : 'rgba(245,158,11,0.18)';
+      ctx.strokeStyle = overspeed ? '#ef4444' : '#f59e0b';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.roundRect(w * 0.56, h * 0.62, w * 0.36, 26, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '700 10px ui-monospace, monospace';
+      ctx.fillText(`📡 ${distM} m`, w * 0.74, h * 0.62 + 13);
+
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  }
+
   // Iniciar
   initAmbient();
   initThumbParticles();
@@ -993,4 +1073,5 @@
   initThumbNetPing();
   initThumbCamaras();
   initThumbRadares();
+  initThumbRadarAlert();
 })();

@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build-and-verify:
-    name: "🔍 Verificar 13 Proyectos, Binarios WASM y Empaquetar"
+    name: "🔍 Verificar 14 Proyectos, Binarios WASM y Empaquetar"
     runs-on: ubuntu-latest
     steps:
       - name: "📥 Descargar código fuente del repositorio"
@@ -65,6 +65,7 @@ jobs:
           check_project "11" "Escáner de Red & Ping LAN" "pr_red"
           check_project "12" "Cámaras DGT en Tiempo Real" "pr_camaras"
           check_project "13" "Radares DGT & Cinemómetros" "pr_radares"
+          check_project "14" "Radar Alert Móvil & Tablet" "pr_radar_alert"
 
       - name: "⚙️ Configurar entorno de GitHub Pages"
         uses: actions/configure-pages@v5

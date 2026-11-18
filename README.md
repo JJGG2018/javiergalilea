@@ -102,12 +102,21 @@ javiergalilea/
 │   ├── engine.wasm       # Motor de cálculo geodésico y ordenación por proximidad (1.515 B)
 │   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 │
-└── pr_radares/           # [Subproyecto 13: Radares DGT & Cinemómetros (WASM)]
-    ├── index.html        # Mapa interactivo y catálogo de 737 cinemómetros (fijos y tramos)
-    ├── radares.css       # Interfaz Cyber Dark, trazados de tramos, banner HUD y modales
-    ├── radares.js        # Avisador acústico/visual, integración Leaflet, filtros y WASM
+├── pr_radares/           # [Subproyecto 13: Radares DGT & Cinemómetros (WASM)]
+│   ├── index.html        # Mapa interactivo y catálogo de 737 cinemómetros (fijos y tramos)
+│   ├── radares.css       # Interfaz Cyber Dark, trazados de tramos, banner HUD y modales
+│   ├── radares.js        # Avisador acústico/visual, integración Leaflet, filtros y WASM
+│   ├── radares.json      # Base de datos oficial de cinemómetros DGT georreferenciados
+│   ├── engine.wasm       # Motor de detección de proximidad y ordenación espacial (1.843 B)
+│   └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
+│
+└── pr_radar_alert/       # [Subproyecto 14: Radar Alert Móvil & Tablet (WASM)]
+    ├── index.html        # Cockpit táctil GPS: velocímetro, límite R-301, sonar y mapa
+    ├── radar_alert.css   # Diseño responsive móvil/tablet, HUD apaisado y modo espejo
+    ├── radar_alert.js    # GPS continuo, avisos por voz/pitidos, WakeLock y Demo en Ruta
+    ├── manifest.json     # Manifiesto PWA instalable en iOS y Android
     ├── radares.json      # Base de datos oficial de cinemómetros DGT georreferenciados
-    ├── engine.wasm       # Motor de detección de proximidad y ordenación espacial (1.843 B)
+    ├── engine.wasm       # Motor geodésico, rumbo relativo y ETA en Rust WASM
     └── engine/           # Crate de Rust autónomo (lib.rs, Cargo.toml)
 ```
 
